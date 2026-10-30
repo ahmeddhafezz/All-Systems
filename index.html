@@ -67,6 +67,24 @@ h1{font-family:var(--display);font-size:clamp(26px,5.5vw,36px);line-height:1.1;m
 .mn dd{margin:0;min-width:0}
 .scan{background:var(--plate);border-radius:8px;padding:4px}
 .scan img{display:block;width:100%;height:auto;border-radius:4px;min-height:60px}
+/* Ink: highlighter + pen drawn over the answer pictures, saved per card on this device */
+.ink-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--surface);padding:6px 0;border-bottom:1px solid var(--line)}
+.ink-bar button{min-width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;cursor:pointer}
+.ink-bar button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:-1px}
+.ink-bar .tog{font-weight:700}
+.ink-bar .tog[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);outline:none}
+.ink-bar .sw{width:22px;height:22px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
+.ink-bar .hl .sw{border-radius:4px;width:24px;height:14px}
+.ink-bar .sep{width:1px;height:28px;background:var(--line);margin:0 2px}
+.ink-bar .hint{font-size:12.5px;color:var(--muted);flex-basis:100%;margin:0 2px}
+.ink-bar .danger{color:var(--fail)}
+.scan{position:relative}
+.scan canvas{position:absolute;left:4px;top:4px;pointer-events:none}
+.scan canvas.ink-h{mix-blend-mode:multiply}
+.inking .scan canvas.ink-p{pointer-events:auto;touch-action:none;cursor:crosshair}
+.inking .scan{box-shadow:0 0 0 2px var(--accent)}
+.inking .scan,.inking .scan *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
 .src{font-size:13px;color:var(--muted);margin:0 4px}
 .dock{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);
   padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
@@ -277,17 +295,18 @@ function render(){
   }
   const r = progress[c.id], s = SYS[c.sys];
   const extra = c.sys === "nephro" && !c.fromList ? '<span class="tag extra">Extra · not on list</span>' : "";
-  const tags = `<div class="tags"><span class="tag sys s-${c.sys}">${esc(s.name)}</span><span class="tag cat">${esc(c.cat)}</span><span class="tag">${esc(c.topic)}</span>${c.mn.length?'<span class="tag">Mnemonic</span>':""}${extra}${r?.s==="fail"?`<span class="tag revise">Revise · failed ${r.n}×</span>`:""}</div>`;
+  const tags = `<div class="tags"><span class="tag sys s-${c.sys}">${esc(s.name)}</span><span class="tag cat">${esc(c.cat)}</span><span class="tag">${esc(c.topic)}</span>${c.mn.length?'<span class="tag">Mnemonic</span>':""}${extra}${r?.s==="fail"?`<span class="tag revise">Revise · failed ${r.n}×</span>`:""}${inkHas(c.id)?'<span class="tag">✏️ Your notes</span>':""}</div>`;
   const pen = c.fromList || c.sys === "nephro" ? "" : `<span class="pen" title="Extra section marked ✍️ in your book">✍️</span>`;
   if (!view.flipped) {
     card.innerHTML = `<div class="front">${tags}<p class="q">${esc(c.q)}${pen}</p><p class="hint">Tap to see the answer</p></div>`;
     dock.innerHTML = PREV() + `<button class="btn primary" id="flip" type="button">Show answer</button>` + NEXT();
     $("flip").onclick = flip;
   } else {
-    const imgs = c.imgs.map(f=>`<div class="scan"><img src="${(window.PQIMG||{})[c.sys+"-"+f.replace(/\.jpg$/,"")] || ("img/"+c.sys+"-"+f)}" alt="Answer from your ${esc(s.name)} ${c.pq ? "past questions" : "book"}" decoding="async"></div>`).join("");
-    card.innerHTML = `<div class="back">${tags}<p class="back-q">${esc(c.q)}${pen}</p>${c.mn.map(mnHTML).join("")}${imgs}${PAGES[c.id] ? `<div class="page">${PAGES[c.id]}</div>` : ""}<p class="src">${c.pq ? "IM Paper 1 past questions (Study Smarter) · page " + esc(c.pages) : esc(SRC[c.sys] || s.name + " book") + " · page " + esc(c.pages)}</p></div>`;
+    const imgs = c.imgs.map((f,k)=>`<div class="scan" data-k="${k}"><img src="${(window.PQIMG||{})[c.sys+"-"+f.replace(/\.jpg$/,"")] || ("img/"+c.sys+"-"+f)}" alt="Answer from your ${esc(s.name)} ${c.pq ? "past questions" : "book"}" decoding="async"><canvas class="ink-h"></canvas><canvas class="ink-p"></canvas></div>`).join("");
+    card.innerHTML = `<div class="back">${tags}<p class="back-q">${esc(c.q)}${pen}</p>${c.mn.map(mnHTML).join("")}${inkBar()}${imgs}${PAGES[c.id] ? `<div class="page">${PAGES[c.id]}</div>` : ""}<p class="src">${c.pq ? "IM Paper 1 past questions (Study Smarter) · page " + esc(c.pages) : esc(SRC[c.sys] || s.name + " book") + " · page " + esc(c.pages)}</p></div>`;
     dock.innerHTML = PREV() + `<button class="btn fail" id="fail" type="button">✗ Fail</button><button class="btn pass" id="pass" type="button">✓ Pass</button>` + NEXT();
     $("fail").onclick = () => mark("fail"); $("pass").onclick = () => mark("pass");
+    inkAttach(c);
   }
   renderReset();
 }
@@ -376,11 +395,12 @@ $("f-topics").onclick=()=>{const p=$("tpanel");p.hidden=!p.hidden;$("f-topics").
 $("t-all").onclick=()=>{ const keys = new Set(SYSTEMS.filter(s=>sysOn(s.key)).flatMap(s=>s.topics.map(t=>tk(s.key,t)))); prefs.off = prefs.off.filter(x=>!keys.has(x)); change(); };
 $("t-none").onclick=()=>{ const keys = SYSTEMS.filter(s=>sysOn(s.key)).flatMap(s=>s.topics.map(t=>tk(s.key,t))); prefs.off = [...new Set([...prefs.off, ...keys])]; change(); };
 $("t-done").onclick=()=>{$("tpanel").hidden=true;$("f-topics").setAttribute("aria-expanded","false");};
-$("card").addEventListener("click", e => { if (e.target.closest(".btn")) return; flip(); });
+$("card").addEventListener("click", e => { if (e.target.closest(".btn, .ink-bar") || (INK.on && e.target.closest(".scan"))) return; flip(); });
 $("card").addEventListener("keydown", e => { if (e.target !== $("card")) return; if (e.key==="Enter"||e.key===" "){ e.preventDefault(); flip(); } });
 $("dock").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; if (b.id==="prev") prev(); else if (b.id==="next") next(); });
 document.addEventListener("keydown", e => {
   if (e.target.tagName==="INPUT") return;
+  if (view.flipped && INK.on && (e.ctrlKey||e.metaKey) && e.key==="z") { e.preventDefault(); inkUndo(); return; }
   if (view.flipped) { if (e.key==="p"||e.key==="ArrowRight") mark("pass"); else if (e.key==="f"||e.key==="ArrowLeft") mark("fail"); }
   else { if (e.key==="ArrowRight") next(); else if (e.key==="ArrowLeft") prev(); }
 });
@@ -391,6 +411,125 @@ $("f-mn").onclick=()=>{prefs.mn=!prefs.mn;change();};
 $("shuffle").onclick=doShuffle;
 $("unshuffle").onclick=doUnshuffle;
 $("f-failed").onclick=()=>{prefs.failed=!prefs.failed;change();};
+
+/* ---------- Ink: highlighter & pen over the answer pictures (saved on this device, per card) ---------- */
+const LSI = "all-systems-ink-v1";
+const INK = {on:false, tool:"hy", data:{}, undo:[], card:null, clearArm:0};
+const TOOLS = {
+  hy:{kind:"h", c:"#fff250", w:0.024, label:"Yellow highlighter"},
+  ho:{kind:"h", c:"#ffab4c", w:0.024, label:"Orange highlighter"},
+  pk:{kind:"p", c:"#1d1d1d", w:0.0042, label:"Black pen"},
+  pr:{kind:"p", c:"#d32f2f", w:0.0042, label:"Red pen"},
+  pb:{kind:"p", c:"#1f4fd1", w:0.0042, label:"Blue pen"},
+  er:{kind:"e", label:"Eraser"}
+};
+try { INK.data = JSON.parse(localStorage.getItem(LSI) || "{}") || {}; } catch(e) { INK.data = {}; }
+try { const t = localStorage.getItem(LSI + "-tool"); if (TOOLS[t]) INK.tool = t; } catch(e) {}
+function inkSave(){ try { localStorage.setItem(LSI, JSON.stringify(INK.data)); } catch(e) {} }
+function inkHas(id){ const d = INK.data[id]; return !!d && Object.values(d).some(a => a && a.length); }
+function inkStrokes(id, k){ const d = INK.data[id] || (INK.data[id] = {}); return d[k] || (d[k] = []); }
+function inkBar(){
+  const sw = (k) => { const t = TOOLS[k];
+    if (t.kind === "e") return `<button type="button" data-tool="er" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool==="er"}">🧽</button>`;
+    return `<button type="button" class="${t.kind==="h"?"hl":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
+  const tools = INK.on ? `${sw("hy")}${sw("ho")}<span class="sep"></span>${sw("pk")}${sw("pr")}${sw("pb")}<span class="sep"></span>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger" aria-label="Clear this card's notes">${INK.clearArm ? "Tap again to clear" : "Clear"}</button><span class="hint">Draw with one finger · scroll with two fingers · turn Draw off to scroll normally</span>` : "";
+  return `<div class="ink-bar"><button type="button" class="tog" data-act="toggle" aria-pressed="${INK.on}">✏️ ${INK.on ? "Drawing on" : "Draw"}</button>${tools}</div>`;
+}
+function inkRefreshBar(){ const b = document.querySelector(".ink-bar"); if (b) b.outerHTML = inkBar(); }
+function inkDraw(scan){
+  const c = INK.card; if (!c) return;
+  const k = +scan.dataset.k, img = scan.querySelector("img"), ch = scan.querySelector(".ink-h"), cp = scan.querySelector(".ink-p");
+  const w = img.clientWidth, h = img.clientHeight; if (!w || !h) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  for (const cv of [ch, cp]) {
+    cv.style.width = w + "px"; cv.style.height = h + "px";
+    if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)) { cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
+    cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
+  }
+  const S = w * dpr;
+  for (const st of inkStrokes(c.id, k)) inkStroke(st.k === "h" ? ch : cp, st, S);
+}
+function inkStroke(cv, st, S){
+  const g = cv.getContext("2d"), P = st.p; if (!P.length) return;
+  g.lineCap = st.k === "h" ? "butt" : "round"; g.lineJoin = "round"; g.strokeStyle = st.c; g.lineWidth = st.w * S; g.globalAlpha = 1;
+  g.beginPath(); g.moveTo(P[0][0]*S, P[0][1]*S);
+  if (P.length === 1) g.lineTo(P[0][0]*S + 0.01, P[0][1]*S);
+  for (let i = 1; i < P.length; i++) g.lineTo(P[i][0]*S, P[i][1]*S);
+  g.stroke();
+}
+function inkAttach(c){
+  INK.card = c; INK.undo = []; INK.clearArm = 0;
+  const card = $("card"); card.classList.toggle("inking", INK.on);
+  card.querySelectorAll(".scan").forEach(scan => {
+    const img = scan.querySelector("img"), cp = scan.querySelector(".ink-p"), k = +scan.dataset.k;
+    const redraw = () => inkDraw(scan);
+    if (img.complete) redraw(); else img.addEventListener("load", redraw, {once:true});
+    if (window.ResizeObserver) new ResizeObserver(redraw).observe(img);
+    const ptrs = new Map(); let cur = null, lastY = null;
+    const pos = e => { const r = cp.getBoundingClientRect(); const w = r.width || 1; return [+(((e.clientX - r.left) / w).toFixed(4)), +(((e.clientY - r.top) / w).toFixed(4))]; };
+    const eraseAt = (pt) => {
+      const arr = inkStrokes(c.id, k), rad = 0.018, gone = [];
+      for (let i = arr.length - 1; i >= 0; i--) {
+        const st = arr[i], lim = rad + st.w/2;
+        if (st.p.some(q => Math.hypot(q[0]-pt[0], q[1]-pt[1]) < lim)) { gone.push([i, st]); arr.splice(i, 1); }
+      }
+      if (gone.length) { INK.undo.push({t:"erase", k, items:gone}); inkDraw(scan); }
+    };
+    cp.addEventListener("pointerdown", e => {
+      if (!INK.on) return;
+      e.preventDefault(); cp.setPointerCapture?.(e.pointerId);
+      ptrs.set(e.pointerId, e.clientY);
+      if (ptrs.size > 1) { if (cur) { cur = null; inkDraw(scan); } lastY = [...ptrs.values()].reduce((a,b)=>a+b)/ptrs.size; return; }
+      const t = TOOLS[INK.tool], pt = pos(e);
+      if (t.kind === "e") { cur = {erase:true}; eraseAt(pt); return; }
+      cur = {k:t.kind, c:t.c, w:t.w, p:[pt]};
+      inkStroke(t.kind === "h" ? scan.querySelector(".ink-h") : cp, cur, cp.width);
+    });
+    cp.addEventListener("pointermove", e => {
+      if (!INK.on || !ptrs.has(e.pointerId)) return;
+      ptrs.set(e.pointerId, e.clientY);
+      if (ptrs.size > 1) { const y = [...ptrs.values()].reduce((a,b)=>a+b)/ptrs.size; if (lastY !== null) window.scrollBy(0, lastY - y); lastY = y; return; }
+      if (!cur) return;
+      const pt = pos(e);
+      if (cur.erase) { eraseAt(pt); return; }
+      const L = cur.p[cur.p.length - 1];
+      if (Math.hypot(pt[0]-L[0], pt[1]-L[1]) < 0.0025) return;
+      cur.p.push(pt);
+      const cv = cur.k === "h" ? scan.querySelector(".ink-h") : cp;
+      if (cur.k === "h") inkDraw(scan), inkStroke(cv, cur, cp.width); else inkStroke(cv, {k:cur.k, c:cur.c, w:cur.w, p:[L, pt]}, cp.width);
+    });
+    const end = e => {
+      if (!ptrs.has(e.pointerId)) return;
+      ptrs.delete(e.pointerId);
+      if (ptrs.size === 0) lastY = null;
+      if (!cur) return;
+      if (!cur.erase && cur.p.length) { inkStrokes(c.id, k).push(cur); INK.undo.push({t:"add", k}); }
+      cur = null; inkSave(); inkDraw(scan);
+    };
+    cp.addEventListener("pointerup", end); cp.addEventListener("pointercancel", end);
+  });
+}
+function inkUndo(){
+  const c = INK.card, a = INK.undo.pop(); if (!c || !a) return;
+  if (a.t === "add") inkStrokes(c.id, a.k).pop();
+  else if (a.t === "erase") { const arr = inkStrokes(c.id, a.k); a.items.slice().reverse().forEach(([i, st]) => arr.splice(i, 0, st)); }
+  else if (a.t === "clear") INK.data[c.id] = a.data;
+  inkSave(); document.querySelectorAll("#card .scan").forEach(inkDraw);
+}
+$("card").addEventListener("click", e => {
+  const b = e.target.closest(".ink-bar button"); if (!b) return;
+  e.stopPropagation();
+  const c = INK.card;
+  if (b.dataset.tool) { INK.tool = b.dataset.tool; try { localStorage.setItem(LSI + "-tool", INK.tool); } catch(err) {} INK.clearArm = 0; inkRefreshBar(); return; }
+  const act = b.dataset.act;
+  if (act === "toggle") { INK.on = !INK.on; INK.clearArm = 0; $("card").classList.toggle("inking", INK.on); inkRefreshBar(); return; }
+  if (act === "undo") { inkUndo(); return; }
+  if (act === "clear" && c) {
+    if (!INK.clearArm) { INK.clearArm = 1; inkRefreshBar(); setTimeout(() => { if (INK.clearArm) { INK.clearArm = 0; inkRefreshBar(); } }, 3000); return; }
+    INK.clearArm = 0; INK.undo.push({t:"clear", data: JSON.parse(JSON.stringify(INK.data[c.id] || {}))});
+    delete INK.data[c.id]; inkSave(); document.querySelectorAll("#card .scan").forEach(inkDraw); inkRefreshBar();
+  }
+}, true);
 buildQueue(); render();
 $("saved").textContent = "Saved on this device";
 
