@@ -432,7 +432,7 @@ function inkBar(){
   const sw = (k) => { const t = TOOLS[k];
     if (t.kind === "e") return `<button type="button" data-tool="er" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool==="er"}">🧽</button>`;
     return `<button type="button" class="${t.kind==="h"?"hl":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
-  const tools = INK.on ? `${sw("hy")}${sw("ho")}<span class="sep"></span>${sw("pk")}${sw("pr")}${sw("pb")}<span class="sep"></span>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger" aria-label="Clear this card's notes">${INK.clearArm ? "Tap again to clear" : "Clear"}</button><span class="hint">Draw with one finger · scroll with two fingers · turn Draw off to scroll normally</span>` : "";
+  const tools = INK.on ? `${sw("hy")}${sw("ho")}<span class="sep"></span>${sw("pk")}${sw("pr")}${sw("pb")}<span class="sep"></span>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger" aria-label="Clear this card's notes">${INK.clearArm ? "Tap again to clear" : "Clear"}</button><span class="hint">Draw with one finger · hold still at the end of a line to straighten it · scroll with two fingers</span>` : "";
   return `<div class="ink-bar"><button type="button" class="tog" data-act="toggle" aria-pressed="${INK.on}">✏️ ${INK.on ? "Drawing on" : "Draw"}</button>${tools}</div>`;
 }
 function inkRefreshBar(){ const b = document.querySelector(".ink-bar"); if (b) b.outerHTML = inkBar(); }
@@ -465,8 +465,8 @@ function inkAttach(c){
     const redraw = () => inkDraw(scan);
     if (img.complete) redraw(); else img.addEventListener("load", redraw, {once:true});
     if (window.ResizeObserver) new ResizeObserver(redraw).observe(img);
-    const ptrs = new Map(); let cur = null, lastY = null;
-    const pos = e => { const r = cp.getBoundingClientRect(); const w = r.width || 1; return [+(((e.clientX - r.left) / w).toFixed(4)), +(((e.clientY - r.top) / w).toFixed(4))]; };
+    let cur = null, holdT = null, holdAt = null;
+    const pos = (x, y) => { const r = cp.getBoundingClientRect(); const w = r.width || 1; return [+(((x - r.left) / w).toFixed(4)), +(((y - r.top) / w).toFixed(4))]; };
     const eraseAt = (pt) => {
       const arr = inkStrokes(c.id, k), rad = 0.018, gone = [];
       for (let i = arr.length - 1; i >= 0; i--) {
@@ -475,40 +475,103 @@ function inkAttach(c){
       }
       if (gone.length) { INK.undo.push({t:"erase", k, items:gone}); inkDraw(scan); }
     };
-    cp.addEventListener("pointerdown", e => {
-      if (!INK.on) return;
-      e.preventDefault(); cp.setPointerCapture?.(e.pointerId);
-      ptrs.set(e.pointerId, e.clientY);
-      if (ptrs.size > 1) { if (cur) { cur = null; inkDraw(scan); } lastY = [...ptrs.values()].reduce((a,b)=>a+b)/ptrs.size; return; }
-      const t = TOOLS[INK.tool], pt = pos(e);
-      if (t.kind === "e") { cur = {erase:true}; eraseAt(pt); return; }
-      cur = {k:t.kind, c:t.c, w:t.w, p:[pt]};
-      inkStroke(t.kind === "h" ? scan.querySelector(".ink-h") : cp, cur, cp.width);
-    });
-    cp.addEventListener("pointermove", e => {
-      if (!INK.on || !ptrs.has(e.pointerId)) return;
-      ptrs.set(e.pointerId, e.clientY);
-      if (ptrs.size > 1) { const y = [...ptrs.values()].reduce((a,b)=>a+b)/ptrs.size; if (lastY !== null) window.scrollBy(0, lastY - y); lastY = y; return; }
-      if (!cur) return;
-      const pt = pos(e);
-      if (cur.erase) { eraseAt(pt); return; }
-      const L = cur.p[cur.p.length - 1];
-      if (Math.hypot(pt[0]-L[0], pt[1]-L[1]) < 0.0025) return;
-      cur.p.push(pt);
-      const cv = cur.k === "h" ? scan.querySelector(".ink-h") : cp;
-      if (cur.k === "h") inkDraw(scan), inkStroke(cv, cur, cp.width); else inkStroke(cv, {k:cur.k, c:cur.c, w:cur.w, p:[L, pt]}, cp.width);
-    });
-    const end = e => {
-      if (!ptrs.has(e.pointerId)) return;
-      ptrs.delete(e.pointerId);
-      if (ptrs.size === 0) lastY = null;
-      if (!cur) return;
-      if (!cur.erase && cur.p.length) { inkStrokes(c.id, k).push(cur); INK.undo.push({t:"add", k}); }
-      cur = null; inkSave(); inkDraw(scan);
+    const layer = () => cur && cur.k === "h" ? scan.querySelector(".ink-h") : cp;
+    const redrawCur = () => { inkDraw(scan); if (cur && !cur.erase) inkStroke(layer(), cur, cp.width); };
+    /* Hold still at the end of a stroke for ~0.5 s -> it snaps to a perfectly straight line (like Apple Notes). */
+    const armHold = (pt) => {
+      clearTimeout(holdT); holdAt = pt;
+      holdT = setTimeout(() => {
+        if (!cur || cur.erase || cur.straight) return;
+        const p0 = cur.p[0];
+        if (Math.hypot(pt[0]-p0[0], pt[1]-p0[1]) < 0.03) return;   // too short to be a line
+        cur.straight = true; cur.p = [p0, pt]; redrawCur();
+        try { navigator.vibrate && navigator.vibrate(8); } catch(e) {}
+      }, 480);
     };
-    cp.addEventListener("pointerup", end); cp.addEventListener("pointercancel", end);
+    scan._ink = {
+      begin(x, y){
+        const t = TOOLS[INK.tool], pt = pos(x, y);
+        if (t.kind === "e") { cur = {erase:true}; eraseAt(pt); return; }
+        cur = {k:t.kind, c:t.c, w:t.w, p:[pt]}; inkStroke(layer(), cur, cp.width); armHold(pt);
+      },
+      move(x, y){
+        if (!cur) return;
+        const pt = pos(x, y);
+        if (cur.erase) { eraseAt(pt); return; }
+        if (cur.straight) { cur.p[1] = pt; redrawCur(); return; }   // after snapping, the end follows the finger and stays straight
+        const L = cur.p[cur.p.length - 1];
+        if (Math.hypot(pt[0]-L[0], pt[1]-L[1]) < 0.0025) return;
+        if (!holdAt || Math.hypot(pt[0]-holdAt[0], pt[1]-holdAt[1]) > 0.006) armHold(pt);
+        cur.p.push(pt);
+        if (cur.k === "h") redrawCur(); else inkStroke(cp, {k:cur.k, c:cur.c, w:cur.w, p:[L, pt]}, cp.width);
+      },
+      end(){
+        clearTimeout(holdT); holdAt = null;
+        if (!cur) return;
+        if (!cur.erase && cur.p.length) { delete cur.straight; inkStrokes(c.id, k).push(cur); INK.undo.push({t:"add", k}); }
+        cur = null; inkSave(); inkDraw(scan);
+      },
+      cancel(){ clearTimeout(holdT); holdAt = null; if (cur && !cur.erase) { cur = null; inkDraw(scan); } cur = null; }
+    };
+    /* mouse & stylus: pointer events (touch is handled by the card-level gesture code below) */
+    cp.addEventListener("pointerdown", e => {
+      if (!INK.on || e.pointerType === "touch") return;
+      e.preventDefault(); cp.setPointerCapture?.(e.pointerId); scan._ink.begin(e.clientX, e.clientY); scan._pid = e.pointerId;
+    });
+    cp.addEventListener("pointermove", e => { if (e.pointerType !== "touch" && scan._pid === e.pointerId) scan._ink.move(e.clientX, e.clientY); });
+    const pend = e => { if (e.pointerType !== "touch" && scan._pid === e.pointerId) { scan._pid = null; scan._ink.end(); } };
+    cp.addEventListener("pointerup", pend); cp.addEventListener("pointercancel", pend);
   });
 }
+
+/* Touch gestures while drawing: one finger draws; two fingers scroll the page smoothly (with momentum).
+   Handled once at card level using touch events, so both fingers are read together in a single event. */
+(() => {
+  const T = {mode:null, scan:null, y:null, v:0, t:0, raf:0};
+  const avgY = ts => { let s = 0; for (const t of ts) s += t.clientY; return s / ts.length; };
+  const stopGlide = () => { cancelAnimationFrame(T.raf); T.raf = 0; };
+  const glide = () => {
+    stopGlide();
+    let v = T.v, last = performance.now();
+    const step = now => {
+      const dt = Math.min(32, now - last); last = now;
+      window.scrollBy(0, -v * dt); v *= Math.pow(0.95, dt / 16);
+      if (Math.abs(v) > 0.02) T.raf = requestAnimationFrame(step); else T.raf = 0;
+    };
+    if (Math.abs(v) > 0.1) T.raf = requestAnimationFrame(step);
+  };
+  const card = $("card");
+  card.addEventListener("touchstart", e => {
+    if (!INK.on || !view.flipped) return;
+    const scan = e.target.closest && e.target.closest(".scan");
+    if (!scan && T.mode !== "draw") return;
+    e.preventDefault(); stopGlide();
+    if (e.touches.length >= 2) {
+      if (T.mode === "draw" && T.scan) T.scan._ink.cancel();   // second finger arrived: drop the half-started stroke, no stray mark
+      T.mode = "scroll"; T.y = avgY(e.touches); T.v = 0; T.t = performance.now(); return;
+    }
+    if (T.mode === "scroll") return;   // a finger left over from a scroll never starts drawing
+    T.mode = "draw"; T.scan = scan; const t = e.touches[0]; scan._ink.begin(t.clientX, t.clientY);
+  }, {passive:false});
+  card.addEventListener("touchmove", e => {
+    if (!T.mode) return;
+    e.preventDefault();
+    if (T.mode === "scroll") {
+      if (e.touches.length < 2) { T.y = avgY(e.touches); return; }
+      const y = avgY(e.touches), now = performance.now(), dy = y - T.y, dt = Math.max(1, now - T.t);
+      window.scrollBy(0, -dy);
+      T.v = 0.7 * T.v + 0.3 * (dy / dt); T.y = y; T.t = now; return;
+    }
+    const t = e.touches[0]; T.scan && T.scan._ink.move(t.clientX, t.clientY);
+  }, {passive:false});
+  const done = e => {
+    if (!T.mode) return;
+    if (T.mode === "draw") { T.scan && T.scan._ink.end(); T.mode = null; T.scan = null; return; }
+    if (e.touches.length === 0) { T.mode = null; if (performance.now() - T.t < 80) glide(); }
+    else T.y = avgY(e.touches);
+  };
+  card.addEventListener("touchend", done); card.addEventListener("touchcancel", done);
+})();
 function inkUndo(){
   const c = INK.card, a = INK.undo.pop(); if (!c || !a) return;
   if (a.t === "add") inkStrokes(c.id, a.k).pop();
