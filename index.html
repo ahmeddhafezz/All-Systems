@@ -442,6 +442,8 @@ const TOOLS = {
   pk:{kind:"p", c:"#1d1d1d", w:0.0042, label:"Black pen"},
   pr:{kind:"p", c:"#d32f2f", w:0.0042, label:"Red pen"},
   pb:{kind:"p", c:"#1f4fd1", w:0.0042, label:"Blue pen"},
+  ik:{kind:"i", c:"#14182b", w:0.0062, label:"Ink pen (fountain)"},
+  ib:{kind:"i", c:"#1638a8", w:0.0062, label:"Blue ink pen (fountain)"},
   er:{kind:"e", label:"Eraser"}
 };
 try { INK.data = JSON.parse(localStorage.getItem(LSI) || "{}") || {}; } catch(e) { INK.data = {}; }
@@ -452,8 +454,9 @@ function inkStrokes(id, k){ const d = INK.data[id] || (INK.data[id] = {}); retur
 function inkBar(){
   const sw = (k) => { const t = TOOLS[k];
     if (t.kind === "e") return `<button type="button" data-tool="er" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool==="er"}">🧽</button>`;
+    if (t.kind === "i") return `<button type="button" class="ink" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span style="font-size:18px;line-height:1;border-bottom:4px solid ${t.c};padding-bottom:1px">✒️</span></button>`;
     return `<button type="button" class="${t.kind==="h"?"hl":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
-  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button></div>` : "";
+  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button></div>` : "";
   return `<button type="button" class="tog" data-act="toggle" aria-pressed="${INK.on}" aria-label="${INK.on ? "Stop drawing" : "Draw on the answer"}" title="${INK.on ? "Stop drawing" : "Draw on the answer"}">${INK.on ? "✓" : "✏️"}</button>${tools}`;
 }
 function inkRefreshBar(){ const f = $("inkfab"); if (!f) return; f.innerHTML = inkBar(); f.hidden = !(view.flipped && view.queue[0]); vvPlace(); }
@@ -472,11 +475,26 @@ function inkDraw(scan){
 }
 function inkStroke(cv, st, S){
   const g = cv.getContext("2d"), P = st.p; if (!P.length) return;
+  if (st.k === "i") return inkFountain(g, st, S);
   g.lineCap = st.k === "h" ? "butt" : "round"; g.lineJoin = "round"; g.strokeStyle = st.c; g.lineWidth = st.w * S; g.globalAlpha = 1;
   g.beginPath(); g.moveTo(P[0][0]*S, P[0][1]*S);
   if (P.length === 1) g.lineTo(P[0][0]*S + 0.01, P[0][1]*S);
   for (let i = 1; i < P.length; i++) g.lineTo(P[i][0]*S, P[i][1]*S);
   g.stroke();
+}
+/* Fountain-style ink: smoothed curve whose width follows speed/pressure (slow = thicker, fast = thinner), tapered ends. */
+function inkFountain(g, st, S){
+  const P = st.p, n = P.length; g.fillStyle = st.c; g.strokeStyle = st.c; g.lineCap = "round"; g.lineJoin = "round";
+  const W = i => { const f = P[i][2] == null ? 1 : P[i][2]; const taper = Math.min(1, 0.45 + 0.55 * Math.min(i, n - 1 - i) / 3); return Math.max(0.35, f * taper) * st.w * S; };
+  if (n === 1) { g.beginPath(); g.arc(P[0][0]*S, P[0][1]*S, W(0)/2, 0, 7); g.fill(); return; }
+  const mid = (a, b) => [(a[0]+b[0])/2, (a[1]+b[1])/2];
+  let prev = [P[0][0], P[0][1]];
+  for (let i = 1; i < n; i++) {
+    const m = i < n - 1 ? mid(P[i], P[i+1]) : [P[i][0], P[i][1]];
+    g.beginPath(); g.lineWidth = (W(i-1) + W(i)) / 2;
+    g.moveTo(prev[0]*S, prev[1]*S); g.quadraticCurveTo(P[i][0]*S, P[i][1]*S, m[0]*S, m[1]*S); g.stroke();
+    prev = m;
+  }
 }
 function inkAttach(c){
   INK.card = c; INK.undo = []; INK.clearArm = 0;
@@ -505,7 +523,7 @@ function inkAttach(c){
         if (!cur || cur.erase || cur.straight) return;
         const p0 = cur.p[0];
         if (Math.hypot(pt[0]-p0[0], pt[1]-p0[1]) < 0.03) return;   // too short to be a line
-        cur.straight = true; cur.p = [p0, pt]; redrawCur();
+        cur.straight = true; cur.p = [p0, cur.k === "i" ? [pt[0], pt[1], 1] : pt]; redrawCur();
         try { navigator.vibrate && navigator.vibrate(8); } catch(e) {}
       }, 480);
     };
@@ -513,23 +531,35 @@ function inkAttach(c){
       begin(x, y){
         const t = TOOLS[INK.tool], pt = pos(x, y);
         if (t.kind === "e") { cur = {erase:true}; eraseAt(pt); return; }
-        cur = {k:t.kind, c:t.c, w:t.w, p:[pt]}; inkStroke(layer(), cur, cp.width); armHold(pt);
+        cur = {k:t.kind, c:t.c, w:t.w, p:[t.kind === "i" ? [pt[0], pt[1], 1] : pt]};
+        if (t.kind === "h") { cur.y0 = pt[1]; cur.x0 = cur.x1 = pt[0]; }
+        cur.lt = performance.now();
+        inkStroke(layer(), cur, cp.width); if (t.kind !== "h") armHold(pt);
       },
       move(x, y){
         if (!cur) return;
         const pt = pos(x, y);
         if (cur.erase) { eraseAt(pt); return; }
-        if (cur.straight) { cur.p[1] = pt; redrawCur(); return; }   // after snapping, the end follows the finger and stays straight
+        if (cur.k === "h") {   // highlighter: always a perfectly horizontal bar at the starting height
+          cur.x0 = Math.min(cur.x0, pt[0]); cur.x1 = Math.max(cur.x1, pt[0]);
+          cur.p = [[cur.x0, cur.y0], [cur.x1, cur.y0]]; redrawCur(); return;
+        }
+        if (cur.straight) { cur.p[1] = cur.k === "i" ? [pt[0], pt[1], 1] : pt; redrawCur(); return; }   // after snapping, the end follows the finger and stays straight
         const L = cur.p[cur.p.length - 1];
         if (Math.hypot(pt[0]-L[0], pt[1]-L[1]) < 0.0025) return;
         if (!holdAt || Math.hypot(pt[0]-holdAt[0], pt[1]-holdAt[1]) > 0.006) armHold(pt);
+        if (cur.k === "i") {
+          const now = performance.now(), dt = Math.max(4, now - cur.lt), v = Math.hypot(pt[0]-L[0], pt[1]-L[1]) / dt * 1000;   // page-widths per second
+          let f = 1.45 - Math.min(1.05, v * 0.9);  if (cur.force) f = 0.55 + cur.force * 1.1;
+          f = L[2] * 0.6 + f * 0.4; cur.lt = now; cur.p.push([pt[0], pt[1], +f.toFixed(3)]); redrawCur(); return;
+        }
         cur.p.push(pt);
-        if (cur.k === "h") redrawCur(); else inkStroke(cp, {k:cur.k, c:cur.c, w:cur.w, p:[L, pt]}, cp.width);
+        inkStroke(cp, {k:cur.k, c:cur.c, w:cur.w, p:[L, pt]}, cp.width);
       },
       end(){
         clearTimeout(holdT); holdAt = null;
         if (!cur) return;
-        if (!cur.erase && cur.p.length) { delete cur.straight; inkStrokes(c.id, k).push(cur); INK.undo.push({t:"add", k}); }
+        if (!cur.erase && cur.p.length) { delete cur.straight; delete cur.x0; delete cur.x1; delete cur.y0; delete cur.lt; delete cur.force; inkStrokes(c.id, k).push(cur); INK.undo.push({t:"add", k}); }
         cur = null; inkSave(); inkDraw(scan);
       },
       cancel(){ clearTimeout(holdT); holdAt = null; if (cur && !cur.erase) { cur = null; inkDraw(scan); } cur = null; }
@@ -539,7 +569,7 @@ function inkAttach(c){
       if (!INK.on || e.pointerType === "touch") return;
       e.preventDefault(); cp.setPointerCapture?.(e.pointerId); scan._ink.begin(e.clientX, e.clientY); scan._pid = e.pointerId;
     });
-    cp.addEventListener("pointermove", e => { if (e.pointerType !== "touch" && scan._pid === e.pointerId) scan._ink.move(e.clientX, e.clientY); });
+    cp.addEventListener("pointermove", e => { if (e.pointerType !== "touch" && scan._pid === e.pointerId) { if (e.pointerType === "pen" && cur && e.pressure) cur.force = e.pressure; scan._ink.move(e.clientX, e.clientY); } });
     const pend = e => { if (e.pointerType !== "touch" && scan._pid === e.pointerId) { scan._pid = null; scan._ink.end(); } };
     cp.addEventListener("pointerup", pend); cp.addEventListener("pointercancel", pend);
   });
