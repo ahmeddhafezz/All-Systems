@@ -105,6 +105,11 @@ h1{font-family:var(--display);font-size:clamp(26px,5.5vw,36px);line-height:1.1;m
 .fab-col .sep{display:block;height:1px;background:var(--line);margin:0 6px}
 .fab-col .danger{color:var(--fail)} .fab-col .armed{background:var(--fail);color:var(--fail-ink);font-size:12px;font-weight:700}
 .dock{transform-origin:0 100%;z-index:25}
+/* Tools moved to the top: one row across the top of the screen (wraps to a second row on narrow phones) */
+.inkfab.top{right:0;flex-direction:row;align-items:flex-start;margin-right:max(10px, env(safe-area-inset-right, 0px))}
+.inkfab.top .fab-col{flex-direction:row;flex-wrap:wrap;align-items:center;flex:0 1 auto;min-width:0}
+.inkfab.top .fab-col .sep{width:1px;height:28px;margin:0 2px}
+.fab-col .pos{font-size:17px}
 
 .btn{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:12px 14px;border-radius:10px;cursor:pointer;flex:1}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);flex:2}
@@ -437,7 +442,7 @@ $("f-failed").onclick=()=>{prefs.failed=!prefs.failed;change();};
 
 /* ---------- Ink: highlighter & pen over the answer pictures (saved on this device, per card) ---------- */
 const LSI = "all-systems-ink-v1";
-const INK = {on:false, tool:"hy", data:{}, undo:[], card:null, clearArm:0};
+const INK = {on:false, tool:"hy", data:{}, undo:[], card:null, clearArm:0, pos:"left"};
 const TOOLS = {
   hy:{kind:"h", c:"#fff250", w:0.024, label:"Yellow highlighter"},
   ho:{kind:"h", c:"#ffab4c", w:0.024, label:"Orange highlighter"},
@@ -450,6 +455,7 @@ const TOOLS = {
 };
 try { INK.data = JSON.parse(localStorage.getItem(LSI) || "{}") || {}; } catch(e) { INK.data = {}; }
 try { const t = localStorage.getItem(LSI + "-tool"); if (TOOLS[t]) INK.tool = t; } catch(e) {}
+try { if (localStorage.getItem(LSI + "-pos") === "top") INK.pos = "top"; } catch(e) {}
 function inkSave(){ try { localStorage.setItem(LSI, JSON.stringify(INK.data)); } catch(e) {} }
 function inkHas(id){ const d = INK.data[id]; return !!d && Object.values(d).some(a => a && a.length); }
 function inkStrokes(id, k){ const d = INK.data[id] || (INK.data[id] = {}); return d[k] || (d[k] = []); }
@@ -458,10 +464,10 @@ function inkBar(){
     if (t.kind === "e") return `<button type="button" data-tool="er" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool==="er"}">🧽</button>`;
     if (t.kind === "i") return `<button type="button" class="ink" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span style="font-size:18px;line-height:1;border-bottom:4px solid ${t.c};padding-bottom:1px">✒️</span></button>`;
     return `<button type="button" class="${t.kind==="h"?"hl":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
-  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button></div>` : "";
+  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
   return `<button type="button" class="tog" data-act="toggle" aria-pressed="${INK.on}" aria-label="${INK.on ? "Stop drawing" : "Draw on the answer"}" title="${INK.on ? "Stop drawing" : "Draw on the answer"}">${INK.on ? "✓" : "✏️"}</button>${tools}`;
 }
-function inkRefreshBar(){ const f = $("inkfab"); if (!f) return; f.innerHTML = inkBar(); f.hidden = !(view.flipped && view.queue[0]); vvPlace(); }
+function inkRefreshBar(){ const f = $("inkfab"); if (!f) return; f.classList.toggle("top", INK.pos === "top"); f.innerHTML = inkBar(); f.hidden = !(view.flipped && view.queue[0]); vvPlace(); }
 function inkDraw(scan){
   const c = INK.card; if (!c) return;
   const k = +scan.dataset.k, img = scan.querySelector("img"), ch = scan.querySelector(".ink-h"), cp = scan.querySelector(".ink-p");
@@ -653,6 +659,7 @@ $("inkfab").addEventListener("click", e => {
   const act = b.dataset.act;
   if (act === "toggle") { INK.on = !INK.on; INK.clearArm = 0; $("card").classList.toggle("inking", INK.on); inkRefreshBar(); return; }
   if (act === "undo") { inkUndo(); return; }
+  if (act === "pos") { INK.pos = INK.pos === "top" ? "left" : "top"; try { localStorage.setItem(LSI + "-pos", INK.pos); } catch(err) {} INK.clearArm = 0; inkRefreshBar(); return; }
   if (act === "clear" && c) {
     if (!INK.clearArm) { INK.clearArm = 1; inkRefreshBar(); setTimeout(() => { if (INK.clearArm) { INK.clearArm = 0; inkRefreshBar(); } }, 3000); return; }
     INK.clearArm = 0; INK.undo.push({t:"clear", data: JSON.parse(JSON.stringify(INK.data[c.id] || {}))});
