@@ -577,31 +577,42 @@ function inkAttach(c){
   });
 }
 
-/* Touch gestures while drawing: one finger draws; two fingers scroll the page smoothly (with momentum).
+/* Touch gestures while drawing: one finger draws; two fingers pan the page in any direction
+   (up/down and left/right, e.g. when zoomed in), smoothly and with momentum.
    Handled once at card level using touch events, so both fingers are read together in a single event. */
 (() => {
-  const T = {mode:null, scan:null, y:null, v:0, t:0, raf:0};
-  const avgY = ts => { let s = 0; for (const t of ts) s += t.clientY; return s / ts.length; };
+  const T = {mode:null, scan:null, x:null, y:null, vx:0, vy:0, t:0, raf:0};
+  const avg = (ts, k) => { let s = 0; for (const t of ts) s += t[k]; return s / ts.length; };
   const stopGlide = () => { cancelAnimationFrame(T.raf); T.raf = 0; };
+  const pan = (dx, dy) => {
+    // Move the visible area; when pinch-zoomed this also slides the zoomed view sideways.
+    const vv = window.visualViewport, bx = window.scrollX, by = window.scrollY, ox = vv ? vv.offsetLeft : 0, oy = vv ? vv.offsetTop : 0;
+    window.scrollBy(dx, dy);
+    if (vv && vv.scale > 1.01 && Math.abs(dx) > 0.5 && window.scrollX === bx && vv.offsetLeft === ox) {
+      // Some browsers keep the zoomed view still on scrollBy; nudge it with scrollTo on the visual position instead.
+      window.scrollTo(vv.pageLeft + dx, vv.pageTop + dy);
+    }
+  };
   const glide = () => {
     stopGlide();
-    let v = T.v, last = performance.now();
+    let vx = T.vx, vy = T.vy, last = performance.now();
     const step = now => {
       const dt = Math.min(32, now - last); last = now;
-      window.scrollBy(0, -v * dt); v *= Math.pow(0.95, dt / 16);
-      if (Math.abs(v) > 0.02) T.raf = requestAnimationFrame(step); else T.raf = 0;
+      pan(-vx * dt, -vy * dt); const k = Math.pow(0.95, dt / 16); vx *= k; vy *= k;
+      if (Math.hypot(vx, vy) > 0.02) T.raf = requestAnimationFrame(step); else T.raf = 0;
     };
-    if (Math.abs(v) > 0.1) T.raf = requestAnimationFrame(step);
+    if (Math.hypot(vx, vy) > 0.1) T.raf = requestAnimationFrame(step);
   };
+  const reset = ts => { T.x = avg(ts, "clientX"); T.y = avg(ts, "clientY"); };
   const card = $("card");
   card.addEventListener("touchstart", e => {
     if (!INK.on || !view.flipped) return;
     const scan = e.target.closest && e.target.closest(".scan");
-    if (!scan && T.mode !== "draw") return;
+    if (!scan && T.mode !== "draw" && T.mode !== "scroll") return;
     e.preventDefault(); stopGlide();
     if (e.touches.length >= 2) {
       if (T.mode === "draw" && T.scan) T.scan._ink.cancel();   // second finger arrived: drop the half-started stroke, no stray mark
-      T.mode = "scroll"; T.y = avgY(e.touches); T.v = 0; T.t = performance.now(); return;
+      T.mode = "scroll"; reset(e.touches); T.vx = 0; T.vy = 0; T.t = performance.now(); return;
     }
     if (T.mode === "scroll") return;   // a finger left over from a scroll never starts drawing
     T.mode = "draw"; T.scan = scan; const t = e.touches[0]; scan._ink.begin(t.clientX, t.clientY);
@@ -610,10 +621,12 @@ function inkAttach(c){
     if (!T.mode) return;
     e.preventDefault();
     if (T.mode === "scroll") {
-      if (e.touches.length < 2) { T.y = avgY(e.touches); return; }
-      const y = avgY(e.touches), now = performance.now(), dy = y - T.y, dt = Math.max(1, now - T.t);
-      window.scrollBy(0, -dy);
-      T.v = 0.7 * T.v + 0.3 * (dy / dt); T.y = y; T.t = now; return;
+      if (e.touches.length < 2) { reset(e.touches); return; }
+      const x = avg(e.touches, "clientX"), y = avg(e.touches, "clientY"), now = performance.now();
+      const dx = x - T.x, dy = y - T.y, dt = Math.max(1, now - T.t);
+      pan(-dx, -dy);
+      T.vx = 0.7 * T.vx + 0.3 * (dx / dt); T.vy = 0.7 * T.vy + 0.3 * (dy / dt);
+      T.x = x; T.y = y; T.t = now; return;
     }
     const t = e.touches[0]; T.scan && T.scan._ink.move(t.clientX, t.clientY);
   }, {passive:false});
@@ -621,7 +634,7 @@ function inkAttach(c){
     if (!T.mode) return;
     if (T.mode === "draw") { T.scan && T.scan._ink.end(); T.mode = null; T.scan = null; return; }
     if (e.touches.length === 0) { T.mode = null; if (performance.now() - T.t < 80) glide(); }
-    else T.y = avgY(e.touches);
+    else reset(e.touches);
   };
   card.addEventListener("touchend", done); card.addEventListener("touchcancel", done);
 })();
