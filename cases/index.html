@@ -7,6 +7,20 @@
 .cq b{color:var(--accent)}
 .zcap{font-size:12px;color:var(--muted);margin:-6px 4px 0}
 .tag.star{background:#fff1c2;color:#6b4e00}
+
+header{padding-block:max(10px, env(safe-area-inset-top, 0px)) 0}
+header .hrow{display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap;min-height:52px;padding-left:60px}
+header .hrow h1{font-size:21px;line-height:1.15;margin:0}
+header .about{font-size:13px;color:var(--muted)} header .about summary{cursor:pointer;color:var(--accent);font-weight:600}
+header .about[open]{flex-basis:100%} header .about .lede{font-size:14px;margin:4px 0 0}
+header .label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);margin:0}
+header .filters{flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:6px -16px 0;padding:0 16px 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+header .filters::-webkit-scrollbar{display:none}
+header .filters .chip{font-size:13px;padding:5px 11px;flex:none;white-space:nowrap}
+header #unshuffle:disabled{display:none}
+.progress{margin-top:8px;padding-left:50px}
+.wrap{min-height:calc(100vh + 200px)}
+.dock.vv{top:0;bottom:auto;transform-origin:0 0}
 </style></head><body>
 <title>IM Cases Flashcards</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -97,7 +111,7 @@ h1{font-family:var(--display);font-size:clamp(26px,5.5vw,36px);line-height:1.1;m
 .src{font-size:13px;color:var(--muted);margin:0 4px}
 .pp{font-size:12.5px;color:var(--muted);margin:4px 4px 0;line-height:1.45} .pp b{color:var(--accent)}
 .dock{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);
-  padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-top:10px;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px));
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
 .dock-in{max-width:860px;margin:0 auto;display:flex;gap:8px}
 /* Floating drawing tools, pinned to the top-left of the screen */
@@ -192,9 +206,7 @@ h1{font-family:var(--display);font-size:clamp(26px,5.5vw,36px);line-height:1.1;m
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Internal medicine · problem-solving cases · 2025 cases book</div>
-    <h1>IM Cases Flashcards</h1>
-    <p class="lede">The front is the case exactly as it is in the cases book. Think of the diagnosis and your answers, then tap to flip: the back gives the diagnosis and the answer to every question on your own Z-book pages, cut down to only what the cases book answer mentions, with an <b>Additional answer from cases</b> box at the bottom for anything extra the cases book adds. Filter by chapter, and by stars with Topics. Cancelled cases are left out.</p>
+    <div class="hrow"><h1>IM Cases Flashcards</h1><details class="about"><summary>How it works</summary><p class="lede">The front is the case exactly as it is in the cases book. Think of the diagnosis and your answers, then tap to flip: the back gives the diagnosis and the answer to every question on your own Z-book pages, cut down to only what the cases book answer mentions, with an <b>Additional answer from cases</b> box at the bottom for anything extra the cases book adds. Filter by chapter, and by stars with Topics. Cancelled cases are left out.</p></details></div>
     <div class="label" id="lbl-sys">Chapters</div>
     <div class="filters" role="group" aria-labelledby="lbl-sys" id="sysrow"></div>
     <div class="label" id="lbl-flt">Filter</div>
@@ -369,15 +381,22 @@ function mark(s){
   if (s === "fail") {
     if (prefs.shuffle && view.queue.length > 2) view.queue.splice(2 + rnd(view.queue.length - 1), 0, c); else view.queue.push(c);
   }
-  view.flipped = false; persist(); render(); window.scrollTo({top:0});
+  view.flipped = false; persist(); render(); toCard();
 }
-function next(){ const c = view.queue.shift(); if (!c) return; view.hist.push(c); view.queue.push(c); view.flipped=false; render(); window.scrollTo({top:0}); }
+function toCard(){
+  /* bring the progress bar + card to the top of the screen (below the notch), not the page header */
+  const el = document.querySelector(".progress"); if (!el) return;
+  const v = window.visualViewport, top = el.getBoundingClientRect().top - (v ? v.offsetTop : 0);
+  const safe = parseFloat(getComputedStyle(document.documentElement).paddingTop) || 0;
+  window.scrollTo(window.scrollX, Math.max(0, window.scrollY + top - 6 - safe));
+}
+function next(){ const c = view.queue.shift(); if (!c) return; view.hist.push(c); view.queue.push(c); view.flipped=false; render(); toCard(); }
 function prev(){
   const c = view.hist.pop(); if (!c) return;
   const i = view.queue.indexOf(c); if (i >= 0) view.queue.splice(i, 1);
-  view.queue.unshift(c); view.flipped=false; render(); window.scrollTo({top:0});
+  view.queue.unshift(c); view.flipped=false; render(); toCard();
 }
-function flip(){ if (!view.queue[0]) return; view.flipped = !view.flipped; render(); if (!view.flipped) window.scrollTo({top:0}); }
+function flip(){ if (!view.queue[0]) return; view.flipped = !view.flipped; render(); if (!view.flipped) toCard(); }
 function renderReset(){
   const w = $("reset-wrap");
   const narrowed = prefs.systems.length || prefs.off.length || prefs.cat!=="all" || prefs.mn;
@@ -693,10 +712,12 @@ $("inkfab").addEventListener("click", e => {
 function vvPlace(){
   const v = window.visualViewport; const d = $("dockwrap"), f = $("inkfab");
   if (!v) return;
-  const de = document.documentElement, LH = de.clientHeight;   // layout-viewport height (window.innerHeight changes with zoom on iOS)
   const s = v.scale || 1, zoomed = Math.abs(s - 1) > 0.01;
-  const dy = v.offsetTop + v.height - LH;
-  d.style.transform = (zoomed || Math.abs(dy) > 1 || v.offsetLeft) ? `translate(${v.offsetLeft}px, ${dy}px) scale(${1/s})` : "";
+  /* top:0 of a fixed element is the top of the layout viewport, and visualViewport offsetTop/height are measured from
+     there too, so this pins the dock's bottom edge to the bottom of what is actually visible, at any zoom and with
+     Safari's toolbars shown or hidden (no guessing the layout height) */
+  d.classList.add("vv");
+  d.style.transform = `translate(${v.offsetLeft}px, ${v.offsetTop + v.height}px) scale(${1/s}) translateY(-100%)`;
   if (f) f.style.transform = (zoomed || v.offsetTop || v.offsetLeft) ? `translate(${v.offsetLeft}px, ${v.offsetTop}px) scale(${1/s})` : "";
 }
 /* follow every frame while the page is zoomed or moving, so the bars never lag behind or slip off screen */
