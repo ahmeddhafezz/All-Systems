@@ -331,7 +331,7 @@ function loadB(n){
   if (BL[n]) return BL[n].p;
   let fin; const p = new Promise(r => fin = r);
   BL[n] = {p, done:false, fin: () => { BL[n].done = true; fin(); }};
-  const sc = document.createElement("script"); sc.src = n + ".js"; sc.async = true; sc.onerror = () => BL[n].fin();
+  const sc = document.createElement("script"); sc.src = n + ".js?v=1793721333"; sc.async = true; sc.onerror = () => BL[n].fin();
   document.head.appendChild(sc); return p;
 }
 const needB = c => (c && c.b || []).filter(n => !(BL[n] && BL[n].done));
