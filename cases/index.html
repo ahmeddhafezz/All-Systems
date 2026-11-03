@@ -21,7 +21,7 @@ header #unshuffle:disabled{display:none}
 .progress{margin-top:8px;padding-left:50px}
 .wrap{min-height:calc(100vh + 200px)}
 .dock.vv{top:0;bottom:auto;transform-origin:0 0}
-</style></head><body>
+.fab-col .szb{font-size:0;width:36px;height:44px}.fab-col .szb[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:-1px}</style></head><body>
 <title>IM Cases Flashcards</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -483,7 +483,10 @@ $("f-failed").onclick=()=>{prefs.failed=!prefs.failed;change();};
 
 /* ---------- Ink: highlighter & pen over the answer pictures (saved on this device, per card) ---------- */
 const LSI = "im-cases-ink-v1";
-const INK = {on:false, tool:"hy", data:{}, undo:[], card:null, clearArm:0, pos:"left"};
+const INK = {on:false, tool:"hy", data:{}, undo:[], card:null, clearArm:0, pos:"left", sz:{h:1, p:1}};
+const SZM = {h:[0.55,1,1.6,2.4], p:[0.6,1,1.7,2.6]};
+const szKind = k => k === "h" ? "h" : "p";
+try { const z = JSON.parse(localStorage.getItem("im-cases-ink-v1-sz") || "null"); if (z && z.h >= 0 && z.p >= 0) INK.sz = z; } catch(e) {}
 const TOOLS = {
   hy:{kind:"h", c:"#fff250", w:0.024, label:"Yellow highlighter"},
   ho:{kind:"h", c:"#ffab4c", w:0.024, label:"Orange highlighter"},
@@ -500,12 +503,17 @@ try { if (localStorage.getItem(LSI + "-pos") === "top") INK.pos = "top"; } catch
 function inkSave(){ try { localStorage.setItem(LSI, JSON.stringify(INK.data)); } catch(e) {} }
 function inkHas(id){ const d = INK.data[id]; return !!d && Object.values(d).some(a => a && a.length); }
 function inkStrokes(id, k){ const d = INK.data[id] || (INK.data[id] = {}); return d[k] || (d[k] = []); }
+function szBtns(){
+  const kk = INK.tool === "er" ? null : szKind(TOOLS[INK.tool].kind); if (!kk) return "";
+  return [0,1,2,3].map(i => { const d = [4,7,11,16][i];
+    return `<button type="button" class="szb" data-size="${i}" aria-label="Size ${i+1}" title="Size ${i+1}" aria-pressed="${INK.sz[kk]===i}"><span style="display:block;width:${d}px;height:${kk==="h"?Math.max(4,d*0.7):d}px;border-radius:${kk==="h"?2:50}px;background:currentColor"></span></button>`; }).join("");
+}
 function inkBar(){
   const sw = (k) => { const t = TOOLS[k];
     if (t.kind === "e") return `<button type="button" data-tool="er" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool==="er"}">🧽</button>`;
     if (t.kind === "i") return `<button type="button" class="ink" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span style="font-size:18px;line-height:1;border-bottom:4px solid ${t.c};padding-bottom:1px">✒️</span></button>`;
     return `<button type="button" class="${t.kind==="h"?"hl":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
-  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
+  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${szBtns()}<i class="sep"></i>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
   return `<button type="button" class="tog" data-act="toggle" aria-pressed="${INK.on}" aria-label="${INK.on ? "Stop drawing" : "Draw on the answer"}" title="${INK.on ? "Stop drawing" : "Draw on the answer"}">${INK.on ? "✓" : "✏️"}</button>${tools}`;
 }
 function inkRefreshBar(){ const f = $("inkfab"); if (!f) return; f.classList.toggle("top", INK.pos === "top"); f.innerHTML = inkBar(); f.hidden = !view.queue[0]; vvPlace(); }
@@ -580,7 +588,7 @@ function inkAttach(c){
       begin(x, y){
         const t = TOOLS[INK.tool], pt = pos(x, y);
         if (t.kind === "e") { cur = {erase:true}; eraseAt(pt); return; }
-        cur = {k:t.kind, c:t.c, w:t.w, p:[t.kind === "i" ? [pt[0], pt[1], 1] : pt]};
+        cur = {k:t.kind, c:t.c, w:t.w * SZM[szKind(t.kind)][INK.sz[szKind(t.kind)]], p:[t.kind === "i" ? [pt[0], pt[1], 1] : pt]};
         if (t.kind === "h") { cur.y0 = pt[1]; cur.x0 = cur.x1 = pt[0]; }
         cur.lt = performance.now();
         inkStroke(layer(), cur, cp.width); if (t.kind !== "h") armHold(pt);
@@ -696,6 +704,7 @@ $("inkfab").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   e.stopPropagation();
   const c = INK.card;
+  if (b.dataset.size != null) { const kk = szKind(TOOLS[INK.tool].kind); INK.sz[kk] = +b.dataset.size; try { localStorage.setItem("im-cases-ink-v1-sz", JSON.stringify(INK.sz)); } catch(err) {} inkRefreshBar(); return; }
   if (b.dataset.tool) { INK.tool = b.dataset.tool; try { localStorage.setItem(LSI + "-tool", INK.tool); } catch(err) {} INK.clearArm = 0; inkRefreshBar(); return; }
   const act = b.dataset.act;
   if (act === "toggle") { INK.on = !INK.on; INK.clearArm = 0; $("card").classList.toggle("inking", INK.on); inkRefreshBar(); return; }
