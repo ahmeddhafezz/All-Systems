@@ -10,4 +10,4 @@ Open `index.html` (or the GitHub Pages link). Tap a card to flip it, then mark P
 
 ## MCQ
 
-`MCQ/` holds the Paradox internal medicine MCQ quiz (past-paper questions by system, with answers, explanations, hard-question marking and PDF export). Open `MCQ/index.html` (or the GitHub Pages link + `/MCQ/`). Progress is saved in your browser.
+`MCQ/` holds the Paradox internal medicine MCQ quiz (past-paper questions by system, with answers, explanations, hard-question marking and PDF export). Open `MCQ/index.html` (or the GitHub Pages link + `/MCQ/`). Progress is saved in your browser. To share progress between devices, open "Sync progress across devices" and connect each device with the same GitHub key (classic token with only the `gist` permission); progress is kept in a private gist named `mcq-progress.json`.
