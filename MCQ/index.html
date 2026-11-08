@@ -50,6 +50,15 @@ body.nokw mark.kw{background:none;padding:0}
 .xfer p{margin:8px 0;font-size:14px;color:var(--muted);direction:rtl;text-align:right}
 .xfer textarea{width:100%;box-sizing:border-box;font:12px ui-monospace,monospace;border:1px solid var(--line);border-radius:9px;padding:8px;background:var(--bg);color:var(--ink);resize:vertical}
 #xferMsg{font-size:14px;color:var(--ok);align-self:center}
+.srcwrap{display:grid;gap:6px}
+.srchead{display:flex;gap:8px;align-items:baseline;font-size:13px;color:var(--muted);font-weight:600}
+.srchint{font-weight:400;font-size:12px}
+.srcchips{display:flex;flex-wrap:wrap;gap:6px}
+.schip{font:600 14px var(--body);border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;font-variant-numeric:tabular-nums}
+.schip:hover{border-color:var(--accent)}
+.schip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:var(--card)}
+.schip[aria-pressed="true"]::before{content:"✓ "}
+.schip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .ghp{direction:ltr!important;text-align:left!important}
 #ghToken{width:100%;font:14px ui-monospace,monospace;border:1px solid var(--line);border-radius:9px;padding:9px;background:var(--bg);color:var(--ink);margin-bottom:8px}
 .ghmsg{font-size:14px;align-self:center;color:var(--muted)} .ghmsg.ok{color:var(--ok)} .ghmsg.bad{color:var(--bad)}
@@ -130,9 +139,9 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
   <section class="picker" id="picker">
     <div class="row">
       <label for="setSel">Question set<select id="setSel"></select></label>
-      <label for="srcSel">Source<select id="srcSel"></select></label>
       <label for="orderSel">Order<select id="orderSel"><option value="seq">In order</option><option value="rand">Shuffled</option><option value="rep">Most repeated first</option></select></label>
     </div>
+    <div class="srcwrap" role="group" aria-labelledby="srcLbl"><div class="srchead"><span id="srcLbl">Source</span><span class="srchint">tap to pick one or more</span></div><div class="srcchips" id="srcChips"></div></div>
     <div class="row">
       <label class="check" for="onlyWrong"><input type="checkbox" id="onlyWrong"> Only questions I got wrong before</label>
       <label class="check" for="onlyHard"><input type="checkbox" id="onlyHard"> Only questions I marked as hard ★ (<span id="hardN">0</span>)</label>
@@ -285,29 +294,45 @@ function syncRun() {
 
 /* ---------- picker ---------- */
 const $ = s => document.querySelector(s);
-const setSel = $("#setSel"), srcSel = $("#srcSel"), orderSel = $("#orderSel");
+const setSel = $("#setSel"), orderSel = $("#orderSel");
+/* Source: several chips can be on at once; value is "any" or the picked keys joined by "," (always in chip order) */
+const SRC_OPTS = [];
+const srcPicked = new Set();
+const srcSel = {
+  get value() { const v = SRC_OPTS.map(o => o.v).filter(v => srcPicked.has(v)); return v.length ? v.join(",") : "any"; },
+  set value(x) { srcPicked.clear(); String(x || "any").split(",").forEach(v => { if (v !== "any" && SRC_OPTS.some(o => o.v === v)) srcPicked.add(v); }); paintSrc(); }
+};
+function paintSrc() {
+  document.querySelectorAll("#srcChips .schip").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === "any" ? srcPicked.size === 0 : srcPicked.has(b.dataset.v))));
+}
 SETS.forEach(s => { const o = document.createElement("option"); o.value = s.id; o.textContent = s.label + " (" + s.n + ")"; setSel.appendChild(o); });
 (function buildSources() {
   const years = {}; let book = 0, other = 0;
   DATA.forEach(q => { (q.yrs || []).forEach(y => { years[y] = (years[y] || 0) + 1; }); if (q.book) book++; if (!(q.yrs || []).length && !q.book) other++; });
-  const add = (v, t) => { const o = document.createElement("option"); o.value = v; o.textContent = t; srcSel.appendChild(o); };
+  const add = (v, t) => {
+    if (v !== "any") SRC_OPTS.push({ v, t });
+    const b = document.createElement("button"); b.type = "button"; b.className = "schip"; b.dataset.v = v; b.textContent = t;
+    b.onclick = () => { if (v === "any") srcPicked.clear(); else if (srcPicked.has(v)) srcPicked.delete(v); else srcPicked.add(v); paintSrc(); };
+    $("#srcChips").appendChild(b);
+  };
   add("any", "All sources");
   add("book", "Department MCQ book (" + book + ")");
   add("exams", "Past exams, any year");
-  Object.keys(years).sort((a, b) => b - a).forEach(y => add("y" + y, "Past exams " + y + " (" + years[y] + ")"));
+  Object.keys(years).sort((a, b) => b - a).forEach(y => add("y" + y, y + " exam (" + years[y] + ")"));
   if (other) add("other", "Other sources, no exam year (" + other + ")");
 })();
 function applyPickerFromStore() {
   if (store.set && SETS.some(s => s.id === store.set)) setSel.value = store.set;
   if (store.order) orderSel.value = store.order;
-  if (store.src && [...srcSel.options].some(o => o.value === store.src)) srcSel.value = store.src;
+  srcSel.value = store.src || "any";
   $("#onlyWrong").checked = !!store.wrongOnly;
   $("#onlyHard").checked = !!store.hardOnly;
   updateHardCount();
 }
 applyPickerFromStore();
 function srcOk(q, src) {
-  if (src === "any") return true;
+  if (src && src.includes(",")) return src.split(",").some(x => srcOk(q, x));
+  if (!src || src === "any") return true;
   if (src === "book") return !!q.book;
   if (src === "exams") return (q.yrs || []).length > 0;
   if (src === "other") return !(q.yrs || []).length && !q.book;
@@ -996,7 +1021,7 @@ $("#pdfBtn").onclick = async () => {
   pdfBusy = true; $("#pdfBtn").disabled = true;
   try {
     const title = SET_EN[def.id] || def.label.replace(/^Chapter: /, "");
-    const subs = [SRC_EN[src] !== undefined ? SRC_EN[src] : "Past exams " + src.slice(1), wrongOnly ? "Only questions I got wrong" : "", hardOnly ? "Only questions I marked as hard" : "", orderSel.value === "rep" ? "Most repeated first" : ""].filter(Boolean);
+    const subs = [src.split(",").map(x => SRC_EN[x] !== undefined ? SRC_EN[x] : "Past exams " + x.slice(1)).filter(Boolean).join(" + "), wrongOnly ? "Only questions I got wrong" : "", hardOnly ? "Only questions I marked as hard" : "", orderSel.value === "rep" ? "Most repeated first" : ""].filter(Boolean);
     const today = new Date(); const date = today.getDate() + "/" + (today.getMonth() + 1) + "/" + today.getFullYear();
     const o = {
       title, sub: subs.join(" · "), mode, docs: docsOf, expl: explFor,
