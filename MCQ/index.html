@@ -145,6 +145,7 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
     <div class="row">
       <label class="check" for="onlyWrong"><input type="checkbox" id="onlyWrong"> Only questions I got wrong before</label>
       <label class="check" for="onlyHard"><input type="checkbox" id="onlyHard"> Only questions I marked as hard ★ (<span id="hardN">0</span>)</label>
+      <label class="check" for="hideDone"><input type="checkbox" id="hideDone"> Hide questions I already answered (right or wrong), so they never come again</label>
       <label class="check" for="noRep"><input type="checkbox" id="noRep"> No repeats: a question that came in several exams is asked only once</label>
       <button class="btn" id="restartBtn" type="button">Start over</button>
       <button class="btn primary" id="startBtn" type="button">Continue</button>
@@ -186,7 +187,7 @@ const SYSCLS = {"Cardiology": "s-cardio", "Chest": "s-chest", "Neurology": "s-ne
 
 /* ---------- progress store: local first, merged with the signed-in viewer's copy ---------- */
 const now = () => Date.now();
-function blank() { return { v: 2, hist: {}, runs: {}, marks: {}, set: null, order: null, src: null, wrongOnly: false, hardOnly: false, noRep: false, updatedAt: 0 }; }
+function blank() { return { v: 2, hist: {}, runs: {}, marks: {}, set: null, order: null, src: null, wrongOnly: false, hardOnly: false, noRep: false, hideDone: false, updatedAt: 0 }; }
 function upgrade(s) {
   if (!s || typeof s !== "object") return blank();
   const out = Object.assign(blank(), s);
@@ -234,7 +235,7 @@ function mergeStores(a, b) {
     out.runs[k] = { ids: newer.ids, i: Math.max(x.i || 0, y.i || 0), ans: Object.assign({}, older.ans, newer.ans), s: x.s, u: Math.max(x.u, y.u) };
   });
   const newer = (b.updatedAt || 0) > (a.updatedAt || 0) ? b : a;
-  out.set = newer.set; out.order = newer.order; out.src = newer.src; out.wrongOnly = newer.wrongOnly; out.hardOnly = !!newer.hardOnly; out.noRep = !!newer.noRep;
+  out.set = newer.set; out.order = newer.order; out.src = newer.src; out.wrongOnly = newer.wrongOnly; out.hardOnly = !!newer.hardOnly; out.noRep = !!newer.noRep; out.hideDone = !!newer.hideDone;
   out.updatedAt = Math.max(a.updatedAt || 0, b.updatedAt || 0);
   return out;
 }
@@ -329,6 +330,7 @@ function applyPickerFromStore() {
   $("#onlyWrong").checked = !!store.wrongOnly;
   $("#onlyHard").checked = !!store.hardOnly;
   $("#noRep").checked = !!store.noRep;
+  $("#hideDone").checked = !!store.hideDone;
   updateHardCount();
 }
 applyPickerFromStore();
@@ -401,12 +403,12 @@ function score(r) {
 }
 function persist() {
   if (!run) return;
-  const needIds = run.order !== "seq" || run.wrongOnly || run.hardOnly || run.noRep || run.src !== "any";
+  const needIds = run.order !== "seq" || run.wrongOnly || run.hardOnly || run.noRep || run.hideDone || run.src !== "any";
   run.u = now();
   store.runs[run.key] = { ids: needIds ? run.list.map(q => q.id) : null, i: run.i, ans: run.own, s: run.s, u: run.u };
   save();
 }
-function keyOf(id, order, src, wrongOnly, hardOnly, noRep) { return id + "|" + order + (src && src !== "any" ? "|" + src : "") + (wrongOnly ? "|w" : "") + (hardOnly ? "|h" : "") + (noRep ? "|n" : ""); }
+function keyOf(id, order, src, wrongOnly, hardOnly, noRep, hideDone) { return id + "|" + order + (src && src !== "any" ? "|" + src : "") + (wrongOnly ? "|w" : "") + (hardOnly ? "|h" : "") + (noRep ? "|n" : "") + (hideDone ? "|u" : ""); }
 // keep one copy of a question that came in several exams (same group and mostly the same answer choices)
 const ansKey = q => (q.ans || []).map(l => NORM(q.opts[q.letters.indexOf(l)] || "").slice(0, 10)).sort().join("+");
 const STOPW = new Set(["the", "and", "with", "may", "its", "for", "from", "are", "was", "has", "can", "not", "all", "any", "old", "man", "woman", "year"]);
@@ -418,41 +420,55 @@ function sameAnswer(a, b) {
   let n = 0; A.forEach(w => { if (B.has(w)) n++; });
   return n * 2 >= Math.min(A.size, B.size);
 }
+function sameQ(q, k) {
+  if (q.id === k.id) return true;
+  if (q.g == null || q.g !== k.g) return false;
+  const mine = new Set(q.opts.map(NORM));
+  return sameAnswer(q, k) || k.opts.filter(o => mine.has(NORM(o))).length * 2 >= Math.min(k.opts.length, q.opts.length);
+}
+// answered before (right or wrong), here or as the same question in another exam
+function isDone(q) {
+  if (store.hist[q.id]) return true;
+  if (q.g == null) return false;
+  return GROUPS[q.g].some(id => id !== q.id && store.hist[id] && sameQ(q, DATA[IDX[id]]));
+}
 function dedupe(list) {
   const kept = {};
   return list.filter(q => {
     if (q.g == null) return true;
     const ks = kept[q.g] || (kept[q.g] = []);
-    const mine = new Set(q.opts.map(NORM));
-    if (ks.some(k => sameAnswer(q, k) || k.opts.filter(o => mine.has(NORM(o))).length * 2 >= Math.min(k.opts.length, q.opts.length))) return false;
+    if (ks.some(k => sameQ(q, k))) return false;
     ks.push(q); return true;
   });
 }
-function buildList(def, order, src, wrongOnly, hardOnly, noRep) {
+function buildList(def, order, src, wrongOnly, hardOnly, noRep, hideDone) {
   let list = def.ids.map(i => DATA[i]).filter(q => srcOk(q, src));
   if (wrongOnly) list = list.filter(q => isWrong(q.id));
   if (hardOnly) list = list.filter(q => isMarked(q.id));
+  if (hideDone) list = list.filter(q => !isDone(q));
   if (noRep) list = dedupe(list);
   if (order === "rand") list = list.map(q => [Math.random(), q]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
   if (order === "rep") list = list.map((q, i) => [q, i]).sort((a, b) => (b[0].rep || 0) - (a[0].rep || 0) || a[1] - b[1]).map(x => x[0]);
   return list;
 }
 function start(fresh, opts) {
-  const id = setSel.value, order = orderSel.value, src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked;
+  const id = setSel.value, order = orderSel.value, src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked, hideDone = $("#hideDone").checked;
   const def = SETS.find(s => s.id === id) || SETS[0];
-  const key = keyOf(def.id, order, src, wrongOnly, hardOnly, noRep);
+  const key = keyOf(def.id, order, src, wrongOnly, hardOnly, noRep, hideDone);
   const saved = store.runs[key];
   if (!fresh && saved) {
     // the marked-hard list follows the current marks; answers already given in it are kept
-    const list = hardOnly ? buildList(def, order, src, wrongOnly, true, noRep) : saved.ids ? saved.ids.map(x => DATA[IDX[x]]).filter(Boolean) : buildList(def, order, src, false, false, noRep);
-    run = { list, i: Math.min(saved.i || 0, list.length), ans: Object.assign({}, saved.ans), own: Object.assign({}, saved.ans), s: saved.s, u: saved.u, label: def.label, key, order, src, wrongOnly, hardOnly, noRep };
+    let list = hardOnly ? buildList(def, order, src, wrongOnly, true, noRep) : saved.ids ? saved.ids.map(x => DATA[IDX[x]]).filter(Boolean) : buildList(def, order, src, false, false, noRep);
+    // hide-answered: drop questions answered somewhere else since; keep the ones answered in this run
+    if (hideDone) list = list.filter(q => (saved.ans || {})[q.id] || !isDone(q));
+    run = { list, i: Math.min(saved.i || 0, list.length), ans: Object.assign({}, saved.ans), own: Object.assign({}, saved.ans), s: saved.s, u: saved.u, label: def.label, key, order, src, wrongOnly, hardOnly, noRep, hideDone };
   } else {
-    run = { list: buildList(def, order, src, wrongOnly, hardOnly, noRep), i: 0, ans: {}, own: {}, s: (fresh || wrongOnly || hardOnly) ? now() : 1, u: now(), label: def.label, key, order, src, wrongOnly, hardOnly, noRep };
+    run = { list: buildList(def, order, src, wrongOnly, hardOnly, noRep, hideDone), i: 0, ans: {}, own: {}, s: (fresh || wrongOnly || hardOnly || hideDone) ? now() : 1, u: now(), label: def.label, key, order, src, wrongOnly, hardOnly, noRep, hideDone };
   }
   syncRun();
-  if (!saved || fresh) { const f = run.list.findIndex(q => !run.ans[q.id]); run.i = f < 0 ? run.list.length : f; }
+  if (!saved || fresh || hideDone) { const f = run.list.findIndex(q => !run.ans[q.id]); run.i = f < 0 ? run.list.length : f; }
   score(run);
-  store.set = def.id; store.order = order; store.src = src; store.wrongOnly = wrongOnly; store.hardOnly = hardOnly; store.noRep = noRep;
+  store.set = def.id; store.order = order; store.src = src; store.wrongOnly = wrongOnly; store.hardOnly = hardOnly; store.noRep = noRep; store.hideDone = hideDone;
   if (!(opts && opts.quiet)) persist();
   $("#picker").hidden = true;
   render();
@@ -473,7 +489,7 @@ function originText(q) {
 function render() {
   const m = $("#main"); m.innerHTML = "";
   syncRun(); score(run);
-  $("#sTot").textContent = run.list.length; $("#sOk").textContent = run.ok; $("#sNo").textContent = run.no; $("#sSet").textContent = run.label + (run.wrongOnly ? " · wrong only" : "") + (run.hardOnly ? " · ★ marked hard" : "") + (run.noRep ? " · no repeats" : "");
+  $("#sTot").textContent = run.list.length; $("#sOk").textContent = run.ok; $("#sNo").textContent = run.no; $("#sSet").textContent = run.label + (run.wrongOnly ? " · wrong only" : "") + (run.hardOnly ? " · ★ marked hard" : "") + (run.noRep ? " · no repeats" : "") + (run.hideDone ? " · new questions only" : "");
   $("#sPos").textContent = Math.min(run.i + 1, run.list.length);
   $("#progFill").style.width = (run.list.length ? (Object.keys(run.ans).length / run.list.length * 100) : 0) + "%";
   if (!run.list.length) { m.innerHTML = '<div class="card empty">No questions match this choice. Change the set or the source, or untick "Only questions I got wrong before" / "Only questions I marked as hard". Mark a question with the ☆ button under it.</div>'; return; }
@@ -548,8 +564,8 @@ function renderEnd() {
   m.querySelector(".stats").textContent = "Wrong: " + run.no + " · Not answered: " + (n - run.ok - run.no);
   $("#backB").onclick = () => { run.i = Math.max(0, n - 1); persist(); render(); };
   $("#again").onclick = () => { $("#onlyWrong").checked = false; $("#onlyHard").checked = false; start(true); };
-  $("#wrongOnly").onclick = () => { $("#onlyWrong").checked = true; $("#onlyHard").checked = false; start(true); };
-  $("#hardB").onclick = () => { $("#onlyWrong").checked = false; $("#onlyHard").checked = true; start(false); };
+  $("#wrongOnly").onclick = () => { $("#onlyWrong").checked = true; $("#onlyHard").checked = false; $("#hideDone").checked = false; start(true); };
+  $("#hardB").onclick = () => { $("#onlyWrong").checked = false; $("#onlyHard").checked = true; $("#hideDone").checked = false; start(false); };
 }
 $("#startBtn").onclick = () => start(false);
 $("#restartBtn").onclick = () => start(true);
@@ -616,7 +632,7 @@ async function attachRemote(ref) {
       if (run && store.runs[run.key]) {
         const [sid, order, ...rest] = run.key.split("|");
         setSel.value = sid; orderSel.value = order;
-        srcSel.value = rest.find(x => x !== "w" && x !== "h" && x !== "n") || "any"; $("#onlyWrong").checked = rest.includes("w"); $("#onlyHard").checked = rest.includes("h"); $("#noRep").checked = rest.includes("n");
+        srcSel.value = rest.find(x => x !== "w" && x !== "h" && x !== "n" && x !== "u") || "any"; $("#onlyWrong").checked = rest.includes("w"); $("#onlyHard").checked = rest.includes("h"); $("#noRep").checked = rest.includes("n"); $("#hideDone").checked = rest.includes("u");
         start(false, { quiet: true });
       } else if (store.set) {
         applyPickerFromStore(); start(false, { quiet: true });
@@ -1038,14 +1054,14 @@ let pdfBusy = false;
 $("#pdfBtn").onclick = async () => {
   if (pdfBusy) return;
   const msg = t => { $("#pdfMsg").textContent = t; };
-  const id = setSel.value, src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked, mode = $("#pdfMode").value;
+  const id = setSel.value, src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked, hideDone = $("#hideDone").checked, mode = $("#pdfMode").value;
   const def = SETS.find(s => s.id === id) || SETS[0];
-  const list = buildList(def, orderSel.value === "rep" ? "rep" : "seq", src, wrongOnly, hardOnly, noRep);
+  const list = buildList(def, orderSel.value === "rep" ? "rep" : "seq", src, wrongOnly, hardOnly, noRep, hideDone);
   if (!list.length) { msg("الفلتر ده مفيهوش أسئلة"); return; }
   pdfBusy = true; $("#pdfBtn").disabled = true;
   try {
     const title = SET_EN[def.id] || def.label.replace(/^Chapter: /, "");
-    const subs = [src.split(",").map(x => SRC_EN[x] !== undefined ? SRC_EN[x] : "Past exams " + x.slice(1)).filter(Boolean).join(" + "), wrongOnly ? "Only questions I got wrong" : "", hardOnly ? "Only questions I marked as hard" : "", noRep ? "No repeats" : "", orderSel.value === "rep" ? "Most repeated first" : ""].filter(Boolean);
+    const subs = [src.split(",").map(x => SRC_EN[x] !== undefined ? SRC_EN[x] : "Past exams " + x.slice(1)).filter(Boolean).join(" + "), wrongOnly ? "Only questions I got wrong" : "", hardOnly ? "Only questions I marked as hard" : "", noRep ? "No repeats" : "", hideDone ? "Not answered yet" : "", orderSel.value === "rep" ? "Most repeated first" : ""].filter(Boolean);
     const today = new Date(); const date = today.getDate() + "/" + (today.getMonth() + 1) + "/" + today.getFullYear();
     const o = {
       title, sub: subs.join(" · "), mode, docs: docsOf, expl: explFor,
