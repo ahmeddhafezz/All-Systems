@@ -224,7 +224,7 @@ function curve(ctx, pts, k) {
 }
 /* Apple-style ink pen: width follows speed (slow = fuller, fast = finer) and the ends taper */
 function inkPen(ctx, s, k) {
-  const pts = s.pts, n = pts.length, W = s.width;
+  const pts = s.pts, n = pts.length, W = s.width || 3; if (n < 2) return;
   const cum = [0]; for (let i = 1; i < n; i++) cum[i] = cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
   const tot = cum[n - 1], tin = Math.min(W * 2.2, tot * 0.3), tout = Math.min(W * 3.5, tot * 0.35);
   const wAt = i => { let f = pts[i][2] || 1; if (n > 4) { if (cum[i] < tin) f *= 0.45 + 0.55 * cum[i] / tin; const d = tot - cum[i]; if (d < tout) f *= 0.3 + 0.7 * d / tout; } return Math.max(0.15, W * f) * k; };
@@ -257,17 +257,18 @@ function strokePath(ctx, s, k) {
 function drawInk(p) {
   if (!p.px) return;
   const ctx = p.inkC.getContext("2d"); ctx.clearRect(0, 0, p.inkC.width, p.inkC.height);
-  for (const s of (strokes[p.i] || [])) strokePath(ctx, s, p.px);
+  for (const s of (strokes[p.i] || [])) { try { strokePath(ctx, s, p.px); } catch (x) { console.warn(x); } }
 }
 function bindInk(p) {
-  let cur = null, pid = null;
+  let cur = null, pid = null, lastT = 0;
   const at = e => { const r = p.liveC.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * p.w, (e.clientY - r.top) / r.height * p.h]; };
-  const live = () => { const c = p.liveC.getContext("2d"); c.clearRect(0, 0, p.liveC.width, p.liveC.height); if (cur) strokePath(c, cur, p.px); };
+  const live = () => { const c = p.liveC.getContext("2d"); c.clearRect(0, 0, p.liveC.width, p.liveC.height); if (cur) try { strokePath(c, cur, p.px); } catch (x) { console.warn(x); } };
   p.liveC.addEventListener("pointerdown", e => {
     if (tool === "hand" || !p.px) return;
+    if (pid !== null && performance.now() - lastT > 350) { pid = null; cur = null; }   // a stroke that never got its "up": drop it so writing can't get stuck
     if (pid !== null) { e.preventDefault(); return; }               // a second touch (palm) while writing: ignore it
-    if (e.pointerType === "touch" && (e.width > 40 || e.height > 40)) return; // very large contact = palm
-    e.preventDefault(); pid = e.pointerId; try { p.liveC.setPointerCapture(pid); } catch (x) {}
+    if (e.pointerType === "touch" && (e.width > 150 || e.height > 150)) return; // only a whole-palm contact is skipped (rubber-tip styluses are wide)
+    e.preventDefault(); pid = e.pointerId; lastT = performance.now(); try { p.liveC.setPointerCapture(pid); } catch (x) {}
     const pt = at(e);
     if (tool === "eraser") { cur = { tool: "eraser" }; eraseAt(p, pt); return; }
     const size = +$("#size").value;
@@ -275,7 +276,7 @@ function bindInk(p) {
     live();
   });
   p.liveC.addEventListener("pointermove", e => {
-    if (e.pointerId !== pid || !cur) return; e.preventDefault();
+    if (e.pointerId !== pid || !cur) return; e.preventDefault(); lastT = performance.now();
     let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if (!evs.length) evs = [e];
     if (cur.tool === "eraser") { for (const ev of evs) eraseAt(p, at(ev)); return; }
     if (cur.tool === "line") { cur.pts = [cur.pts[0], at(e)]; live(); return; }
@@ -283,8 +284,9 @@ function bindInk(p) {
       const q = at(ev), l = cur.pts[cur.pts.length - 1], d = Math.hypot(q[0] - l[0], q[1] - l[1]);
       if (d <= 0.35) continue;
       if (cur.tool === "pen") {                                        // ink responds to speed, like Apple's pen
-        const dt = Math.max(1, ev.timeStamp - (cur.t || ev.timeStamp - 16)); cur.t = ev.timeStamp;
-        const v = d / dt, f = 1.05 - 0.5 * Math.min(1, v / 0.9);
+        const ts = Number.isFinite(ev.timeStamp) && ev.timeStamp > 0 ? ev.timeStamp : performance.now();
+        let dt = ts - (cur.t || ts - 16); if (!(dt >= 1 && dt < 500)) dt = 16; cur.t = ts;
+        const v = d / dt; let f = 1.05 - 0.5 * Math.min(1, v / 0.9); if (!Number.isFinite(f)) f = 1;
         cur.wf = cur.wf == null ? f : cur.wf * 0.75 + f * 0.25; q.push(+cur.wf.toFixed(2));
       }
       cur.pts.push(q);
@@ -300,7 +302,7 @@ function bindInk(p) {
     }
     cur = null; live();
   };
-  p.liveC.addEventListener("pointerup", end); p.liveC.addEventListener("pointercancel", end);
+  p.liveC.addEventListener("pointerup", end); p.liveC.addEventListener("pointercancel", end); p.liveC.addEventListener("lostpointercapture", end);
 }
 function eraseAt(p, pt) {
   const list = strokes[p.i] || []; const r = 6;
