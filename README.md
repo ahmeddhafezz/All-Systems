@@ -15,3 +15,7 @@ Open `index.html` (or the GitHub Pages link). Tap a card to flip it, then mark P
 ## Derma
 
 `Derma/` holds the Paradox dermatology MCQ quiz: Kasr Al-Ainy past-exam questions 2020–2026, each question once with how many exams it came in and which years, answers, explanations with the derma department book page, hard-question marking and PDF export. Open `Derma/index.html` (or the GitHub Pages link + `/Derma/`). Progress is saved in your browser, separately from the IM MCQ. Sync between devices works the same way as the MCQ (same GitHub key); derma progress is kept in its own private gist file `derma-progress.json`.
+
+## ClinPath
+
+`ClinPath/` holds the Paradox clinical pathology MCQ quiz: every MCQ and case question from the Kasr Al-Ainy department question book, plus past exams from 2018 to 2025 (written papers and oral sheets with choices). Each question appears once, with the exams it came in; case questions show their lab report. Answers, short explanations and the Clinical Pathology Part I page are under each question. Open `ClinPath/index.html` (or the GitHub Pages link + `/ClinPath/`). Progress is saved in your browser, separately from the other quizzes; sync between devices uses the same GitHub key, in its own private gist file `clinpath-progress.json`.
