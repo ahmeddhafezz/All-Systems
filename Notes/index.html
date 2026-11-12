@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PDF Notes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+:root{--bg:#e9e7ef;--bar:#fbfbfd;--ink:#22223a;--muted:#6b6b80;--line:#d9d7e3;--acc:#2f7fd0;--on:#e3eefb}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
+#bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 10px;background:var(--bar);border-bottom:1px solid var(--line);position:relative;z-index:5;touch-action:manipulation}
+.grp{display:flex;gap:4px;align-items:center;padding-right:8px;margin-right:2px;border-right:1px solid var(--line)}
+.grp:last-child{border-right:0}
+button.t{min-width:42px;height:40px;border:1px solid var(--line);background:#fff;border-radius:10px;font:600 14px inherit;color:var(--ink);padding:0 9px;display:flex;align-items:center;justify-content:center;gap:5px}
+button.t.on{background:var(--on);border-color:var(--acc);color:var(--acc)}
+button.t:disabled{opacity:.4}
+.sw{width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);padding:0}
+.sw.on{box-shadow:0 0 0 3px var(--acc)}
+input[type=range]{width:90px}
+#pg{min-width:70px;text-align:center;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+#viewer{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;position:relative}
+#pages{padding:14px 0 120px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.page{position:relative;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.page canvas{position:absolute;inset:0;width:100%;height:100%}
+.draw .page .ink,.draw .page .live{touch-action:none}
+.hand .page .ink,.hand .page .live{touch-action:pan-x pan-y;pointer-events:none}
+#start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center}
+#start h1{margin:0;font-size:24px}
+#start p{margin:0;color:var(--muted);max-width:460px;line-height:1.5}
+.big{height:48px;padding:0 22px;border-radius:12px;border:0;background:var(--acc);color:#fff;font:600 16px inherit}
+#recent{display:flex;flex-direction:column;gap:6px;width:min(460px,100%)}
+#recent button{height:44px;border-radius:10px;border:1px solid var(--line);background:#fff;font:15px inherit;text-align:left;padding:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#msg{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#22223a;color:#fff;padding:9px 14px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+#msg.show{opacity:.95}
+.hide{display:none!important}
+</style>
+</head>
+<body class="draw">
+<div id="bar" class="hide">
+  <div class="grp">
+    <button class="t" id="openB" title="Open another PDF">📂</button>
+  </div>
+  <div class="grp" id="tools">
+    <button class="t on" data-tool="pen" title="Pen">✒️ Pen</button>
+    <button class="t" data-tool="marker" title="Highlighter">🖍 Marker</button>
+    <button class="t" data-tool="pencil" title="Pencil">✏️</button>
+    <button class="t" data-tool="line" title="Straight line">📏</button>
+    <button class="t" data-tool="eraser" title="Eraser (whole stroke)">🧽</button>
+    <button class="t" data-tool="hand" title="Hand: scroll with your finger">✋</button>
+  </div>
+  <div class="grp" id="colors"></div>
+  <div class="grp"><input type="range" id="size" min="1" max="10" value="3" title="Thickness"></div>
+  <div class="grp">
+    <button class="t" id="undoB" title="Undo">↶</button>
+    <button class="t" id="redoB" title="Redo">↷</button>
+  </div>
+  <div class="grp">
+    <button class="t" id="zOut" title="Zoom out">−</button>
+    <button class="t" id="zFit" title="Fit width">⤢</button>
+    <button class="t" id="zIn" title="Zoom in">＋</button>
+  </div>
+  <div class="grp">
+    <button class="t" id="prevB" title="Previous page">▲</button>
+    <span id="pg">–</span>
+    <button class="t" id="nextB" title="Next page">▼</button>
+  </div>
+  <div class="grp">
+    <button class="t" id="saveB" title="Save a copy of the PDF with your notes">⤓ PDF</button>
+  </div>
+</div>
+<div id="viewer">
+  <div id="start">
+    <h1>PDF Notes</h1>
+    <p>Open your PDF and write with your stylus. Pinch-zoom is switched off here, so circles and S shapes won't zoom the page. Use the ＋ / − buttons to zoom and ✋ to scroll.</p>
+    <button class="big" id="pickB">Open a PDF</button>
+    <div id="recent"></div>
+  </div>
+  <div id="pages"></div>
+</div>
+<input type="file" id="file" accept="application/pdf" class="hide">
+<div id="msg"></div>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const $ = s => document.querySelector(s);
+const COLORS = ["#1d1d1f", "#1f5fbf", "#d32f2f", "#2e7d32", "#f9d71c", "#ff9800", "#8e44ad"];
+const TOOL = {
+  pen:    { w: 1.0, alpha: 1,    cap: "round" },
+  pencil: { w: 0.6, alpha: 0.8,  cap: "round" },
+  marker: { w: 5.0, alpha: 0.35, cap: "butt"  },
+  line:   { w: 1.0, alpha: 1,    cap: "round" }
+};
+let tool = "pen", color = { pen: "#1f5fbf", pencil: "#1d1d1f", marker: "#f9d71c", line: "#d32f2f" };
+let pdf = null, docKey = null, docName = "", pdfBytes = null, pages = [], strokes = {}, undo = [], redo = [], zoom = 1, baseW = 800;
+
+/* ---------- tiny storage (this browser only) ---------- */
+let dbp = null;
+function db() {
+  if (dbp) return dbp;
+  dbp = new Promise((res) => {
+    try {
+      const r = indexedDB.open("pdfnotes", 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore("docs"); };
+      r.onsuccess = () => res(r.result); r.onerror = () => res(null);
+    } catch (e) { res(null); }
+  });
+  return dbp;
+}
+async function idb(mode, fn) {
+  const d = await db(); if (!d) return null;
+  return new Promise((res) => {
+    try { const tx = d.transaction("docs", mode); const st = tx.objectStore("docs"); const r = fn(st); tx.oncomplete = () => res(r && r.result); tx.onerror = () => res(null); }
+    catch (e) { res(null); }
+  });
+}
+const put = (k, v) => idb("readwrite", st => st.put(v, k));
+const get = k => idb("readonly", st => st.get(k));
+const keys = () => idb("readonly", st => st.getAllKeys());
+let saveT = null;
+function autosave() { clearTimeout(saveT); saveT = setTimeout(() => { if (docKey) put(docKey, { name: docName, bytes: pdfBytes, strokes, t: Date.now() }); }, 500); }
+
+function msg(t) { const m = $("#msg"); m.textContent = t; m.classList.add("show"); clearTimeout(msg.t); msg.t = setTimeout(() => m.classList.remove("show"), 2200); }
+
+/* ---------- start screen ---------- */
+async function showRecent() {
+  const ks = (await keys()) || []; const box = $("#recent"); box.innerHTML = "";
+  for (const k of ks.slice(-8).reverse()) {
+    const b = document.createElement("button"); b.textContent = "↺ " + String(k).split("|")[0];
+    b.onclick = async () => { const d = await get(k); if (d) openBytes(d.bytes, d.name, d.strokes); };
+    box.appendChild(b);
+  }
+}
+$("#pickB").onclick = $("#openB").onclick = () => $("#file").click();
+$("#file").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const bytes = new Uint8Array(await f.arrayBuffer());
+  const old = await get(f.name + "|" + f.size);
+  openBytes(bytes, f.name, old ? old.strokes : {});
+  e.target.value = "";
+};
+
+/* ---------- open and lay out ---------- */
+async function openBytes(bytes, name, saved) {
+  pdfBytes = bytes; docName = name; docKey = name + "|" + bytes.length; strokes = saved || {}; undo = []; redo = [];
+  msg("Opening…");
+  pdf = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+  $("#start").classList.add("hide"); $("#bar").classList.remove("hide");
+  const box = $("#pages"); box.innerHTML = ""; pages = [];
+  baseW = Math.min($("#viewer").clientWidth - 24, 1100);
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const p = await pdf.getPage(i); const vp = p.getViewport({ scale: 1 });
+    const el = document.createElement("div"); el.className = "page"; el.dataset.i = i - 1;
+    const c1 = document.createElement("canvas"), c2 = document.createElement("canvas"), c3 = document.createElement("canvas");
+    c1.className = "pdf"; c2.className = "ink"; c3.className = "live";
+    el.append(c1, c2, c3); box.appendChild(el);
+    const pg = { i: i - 1, page: p, w: vp.width, h: vp.height, el, pdfC: c1, inkC: c2, liveC: c3, scale: 0, busy: false };
+    pages.push(pg); bindInk(pg);
+  }
+  layout(); put(docKey, { name, bytes, strokes, t: Date.now() }); updUndo();
+}
+function layout() {
+  for (const p of pages) {
+    const w = baseW * zoom, h = w * p.h / p.w;
+    p.el.style.width = w + "px"; p.el.style.height = h + "px"; p.cssW = w; p.cssH = h; p.scale = 0;
+  }
+  renderVisible();
+}
+let rT = null;
+function renderVisible() {
+  clearTimeout(rT);
+  rT = setTimeout(async () => {
+    const v = $("#viewer"), top = v.scrollTop - 400, bot = v.scrollTop + v.clientHeight + 400;
+    let cur = 0;
+    for (const p of pages) {
+      const y = p.el.offsetTop, h = p.cssH;
+      if (y <= v.scrollTop + v.clientHeight / 2) cur = p.i;
+      if (y + h < top || y > bot) continue;
+      if (p.scale !== zoom && !p.busy) renderPage(p);
+    }
+    $("#pg").textContent = (cur + 1) + " / " + pages.length;
+  }, 80);
+}
+async function renderPage(p) {
+  p.busy = true; const want = zoom;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const s = (p.cssW / p.w) * dpr;
+  const vp = p.page.getViewport({ scale: s });
+  const c = document.createElement("canvas"); c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+  await p.page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+  p.pdfC.width = c.width; p.pdfC.height = c.height; p.pdfC.getContext("2d").drawImage(c, 0, 0);
+  for (const cv of [p.inkC, p.liveC]) { cv.width = c.width; cv.height = c.height; }
+  p.px = c.width / p.w; p.scale = want; p.busy = false;
+  drawInk(p);
+  if (zoom !== want) renderPage(p);
+}
+$("#viewer").addEventListener("scroll", renderVisible, { passive: true });
+window.addEventListener("resize", () => { if (!pdf) return; baseW = Math.min($("#viewer").clientWidth - 24, 1100); layout(); });
+
+/* ---------- ink ---------- */
+function strokePath(ctx, s, k) {
+  const t = TOOL[s.tool] || TOOL.pen;
+  ctx.save(); ctx.globalAlpha = t.alpha; ctx.strokeStyle = s.color; ctx.lineWidth = s.width * k; ctx.lineCap = t.cap; ctx.lineJoin = "round";
+  if (s.tool === "marker") ctx.globalCompositeOperation = "multiply";
+  const pts = s.pts; ctx.beginPath();
+  if (pts.length === 1) { ctx.arc(pts[0][0] * k, pts[0][1] * k, s.width * k / 2, 0, 7); ctx.fillStyle = s.color; ctx.fill(); ctx.restore(); return; }
+  ctx.moveTo(pts[0][0] * k, pts[0][1] * k);
+  for (let i = 1; i < pts.length - 1; i++) { const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2; ctx.quadraticCurveTo(pts[i][0] * k, pts[i][1] * k, mx * k, my * k); }
+  const L = pts[pts.length - 1]; ctx.lineTo(L[0] * k, L[1] * k); ctx.stroke(); ctx.restore();
+}
+function drawInk(p) {
+  if (!p.px) return;
+  const ctx = p.inkC.getContext("2d"); ctx.clearRect(0, 0, p.inkC.width, p.inkC.height);
+  for (const s of (strokes[p.i] || [])) strokePath(ctx, s, p.px);
+}
+function bindInk(p) {
+  let cur = null, pid = null;
+  const at = e => { const r = p.liveC.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * p.w, (e.clientY - r.top) / r.height * p.h]; };
+  const live = () => { const c = p.liveC.getContext("2d"); c.clearRect(0, 0, p.liveC.width, p.liveC.height); if (cur) strokePath(c, cur, p.px); };
+  p.liveC.addEventListener("pointerdown", e => {
+    if (tool === "hand" || !p.px) return;
+    if (pid !== null) { e.preventDefault(); return; }               // a second touch (palm) while writing: ignore it
+    if (e.pointerType === "touch" && (e.width > 40 || e.height > 40)) return; // very large contact = palm
+    e.preventDefault(); pid = e.pointerId; try { p.liveC.setPointerCapture(pid); } catch (x) {}
+    const pt = at(e);
+    if (tool === "eraser") { cur = { tool: "eraser" }; eraseAt(p, pt); return; }
+    const size = +$("#size").value;
+    cur = { tool, color: color[tool], width: TOOL[tool].w * size, pts: [pt] };
+    live();
+  });
+  p.liveC.addEventListener("pointermove", e => {
+    if (e.pointerId !== pid || !cur) return; e.preventDefault();
+    let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if (!evs.length) evs = [e];
+    if (cur.tool === "eraser") { for (const ev of evs) eraseAt(p, at(ev)); return; }
+    if (cur.tool === "line") { cur.pts = [cur.pts[0], at(e)]; live(); return; }
+    for (const ev of evs) { const q = at(ev), l = cur.pts[cur.pts.length - 1]; if (Math.hypot(q[0] - l[0], q[1] - l[1]) > 0.35) cur.pts.push(q); }
+    live();
+  });
+  const end = e => {
+    if (e.pointerId !== pid) return; pid = null;
+    if (cur && cur.tool !== "eraser") {
+      (strokes[p.i] = strokes[p.i] || []).push(cur);
+      undo.push({ type: "add", page: p.i, s: cur }); redo = []; drawInk(p); autosave(); updUndo();
+    }
+    cur = null; live();
+  };
+  p.liveC.addEventListener("pointerup", end); p.liveC.addEventListener("pointercancel", end);
+}
+function eraseAt(p, pt) {
+  const list = strokes[p.i] || []; const r = 6;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const s = list[i]; const pts = s.pts; let hit = false;
+    for (let j = 0; j < pts.length && !hit; j++) {
+      const a = pts[j], b = pts[Math.min(j + 1, pts.length - 1)];
+      const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
+      const t = L ? Math.max(0, Math.min(1, ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / L)) : 0;
+      if (Math.hypot(a[0] + t * dx - pt[0], a[1] + t * dy - pt[1]) < r + s.width / 2) hit = true;
+    }
+    if (hit) { list.splice(i, 1); undo.push({ type: "del", page: p.i, s, at: i }); redo = []; drawInk(p); autosave(); updUndo(); }
+  }
+}
+function updUndo() { $("#undoB").disabled = !undo.length; $("#redoB").disabled = !redo.length; }
+$("#undoB").onclick = () => {
+  const a = undo.pop(); if (!a) return; const list = strokes[a.page] = strokes[a.page] || [];
+  if (a.type === "add") { const k = list.lastIndexOf(a.s); if (k >= 0) list.splice(k, 1); } else list.splice(a.at, 0, a.s);
+  redo.push(a); drawInk(pages[a.page]); autosave(); updUndo();
+};
+$("#redoB").onclick = () => {
+  const a = redo.pop(); if (!a) return; const list = strokes[a.page] = strokes[a.page] || [];
+  if (a.type === "add") list.push(a.s); else { const k = list.indexOf(a.s); if (k >= 0) list.splice(k, 1); }
+  undo.push(a); drawInk(pages[a.page]); autosave(); updUndo();
+};
+
+/* ---------- toolbar ---------- */
+function paintColors() {
+  const box = $("#colors"); box.innerHTML = "";
+  if (tool === "eraser" || tool === "hand") { box.classList.add("hide"); return; }
+  box.classList.remove("hide");
+  for (const c of COLORS) {
+    const b = document.createElement("button"); b.className = "sw" + (color[tool] === c ? " on" : ""); b.style.background = c;
+    b.onclick = () => { color[tool] = c; paintColors(); }; box.appendChild(b);
+  }
+}
+document.querySelectorAll("#tools .t").forEach(b => b.onclick = () => {
+  tool = b.dataset.tool;
+  document.querySelectorAll("#tools .t").forEach(x => x.classList.toggle("on", x === b));
+  document.body.classList.toggle("hand", tool === "hand"); document.body.classList.toggle("draw", tool !== "hand");
+  paintColors();
+});
+paintColors();
+function setZoom(z) {
+  const v = $("#viewer"), frac = v.scrollTop / Math.max(1, v.scrollHeight);
+  zoom = Math.max(0.5, Math.min(3, z)); layout(); v.scrollTop = frac * v.scrollHeight;
+  msg(Math.round(zoom * 100) + "%");
+}
+$("#zIn").onclick = () => setZoom(zoom * 1.25);
+$("#zOut").onclick = () => setZoom(zoom / 1.25);
+$("#zFit").onclick = () => setZoom(1);
+function curPage() { const v = $("#viewer"); let c = 0; for (const p of pages) if (p.el.offsetTop <= v.scrollTop + 40) c = p.i; return c; }
+$("#nextB").onclick = () => { const p = pages[Math.min(pages.length - 1, curPage() + 1)]; if (p) $("#viewer").scrollTop = p.el.offsetTop - 8; };
+$("#prevB").onclick = () => { const p = pages[Math.max(0, curPage() - 1)]; if (p) $("#viewer").scrollTop = p.el.offsetTop - 8; };
+/* stop Safari's own pinch and double-tap zoom anywhere on the page */
+["gesturestart", "gesturechange", "gestureend"].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+let lastTap = 0; document.addEventListener("touchend", e => { const n = Date.now(); if (n - lastTap < 320) e.preventDefault(); lastTap = n; }, { passive: false });
+
+/* ---------- save a copy with the notes ---------- */
+$("#saveB").onclick = async () => {
+  if (!pdf) return; msg("Making your PDF…");
+  try {
+    const out = await PDFLib.PDFDocument.load(pdfBytes);
+    const ps = out.getPages();
+    for (const p of pages) {
+      const list = strokes[p.i]; if (!list || !list.length) continue;
+      const k = 2.5, c = document.createElement("canvas"); c.width = Math.ceil(p.w * k); c.height = Math.ceil(p.h * k);
+      const ctx = c.getContext("2d"); for (const s of list) strokePath(ctx, s, k);
+      const png = await out.embedPng(c.toDataURL("image/png"));
+      const pg = ps[p.i]; const { width, height } = pg.getSize();
+      pg.drawImage(png, { x: 0, y: 0, width, height });
+    }
+    const bytes = await out.save();
+    const name = docName.replace(/\.pdf$/i, "") + " - notes.pdf";
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    let dl = null;
+    try { dl = window.claude && window.claude.use ? await Promise.race([window.claude.use("downloads"), new Promise(r => setTimeout(() => r(null), 3000))]) : null; } catch (e) { dl = null; }
+    if (dl) { try { await dl.save({ filename: name, data: blob }); msg("Saved ✓"); return; } catch (e) { if (e && e.code === "declined") { msg("Cancelled"); return; } } }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 8000); msg("Saved ✓");
+  } catch (e) { console.error(e); msg("Couldn't make the PDF, try again"); }
+};
+showRecent();
+</script>
+</body>
+</html>
