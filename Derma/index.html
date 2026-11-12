@@ -730,7 +730,7 @@ const PX = (() => {
       const right = q.flag === "ALL" ? "Counted correct for everyone" : q.ans.map(a => a + ". " + q.opts[q.letters.indexOf(a)]).join("   or   ");
       const parts = [[[{ t: "Answer:  ", k: "B", c: C.purple }, { t: right, k: "B", c: C.navy }], 9.2, 12.4]];
       const cr = CROP[q.id];
-      if (cr) parts.push([[{ t: "From the book, p. " + bookPages(cr) + ":  ", k: "B", c: C.purple }, { t: cr.c, k: "R", c: C.ink }], 8.8, 11.8]);
+      if (cr) parts.push([[{ t: "From the book, p. " + bookPages(cr) + ":  ", k: "B", c: C.purple }, { t: cr.c.replace(/›/g, ">"), k: "R", c: C.ink }], 8.8, 11.8]);
       else { const ex = opt.expl(q); if (ex) parts.push([[{ t: "Not in the book:  ", k: "B", c: C.purple }, { t: ex, k: "R", c: C.ink }], 8.8, 11.8]); }
       const src = opt.src(q); if (src) parts.push([[{ t: "Source: " + src, k: "R", c: C.grey }], 7.6, 10]);
       rows.push(gapRow(4));
