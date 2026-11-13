@@ -47,6 +47,7 @@ body.nokw mark.kw{background:none;padding:0}
 
 .xfer{border-top:1px solid var(--line);padding-top:10px}
 .xfer summary{cursor:pointer;color:var(--accent);font-weight:700}
+.xfer a{color:var(--accent)}#ghTok{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card,#fff);color:inherit}.ghdot{font-size:12px;color:var(--muted);margin-inline-start:8px}.ghdot.bad{color:#c0392b}
 .xfer p{margin:8px 0;font-size:14px;color:var(--muted);direction:rtl;text-align:right}
 .xfer textarea{width:100%;box-sizing:border-box;font:12px ui-monospace,monospace;border:1px solid var(--line);border-radius:9px;padding:8px;background:var(--bg);color:var(--ink);resize:vertical}
 #xferMsg{font-size:14px;color:var(--ok);align-self:center}
@@ -132,6 +133,15 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
       <label for="pdfMode">PDF of this filter<select id="pdfMode"><option value="key">Questions + answer key at the end</option><option value="expl">Answer &amp; explanation under each question</option></select></label>
       <button class="btn" id="pdfBtn" type="button">⤓ <span class="ar">نزّلي الفلتر ده PDF</span></button><span id="pdfMsg" class="ar"></span>
     </div>
+    <details class="xfer" id="ghBox" open><summary class="ar">مزامنة الموبايل والآيباد تلقائي</summary>
+      <div id="ghSetup">
+        <p class="ar">مرة واحدة على كل جهاز: (١) افتحي <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Paradox%20quiz%20sync" target="_blank" rel="noopener">اللينك ده</a> وانتي داخلة على حساب GitHub بتاعك. (٢) في Expiration اختاري <b>No expiration</b>، وسيبي علامة <b>gist</b> بس، وانزلي دوسي <b>Generate token</b>. (٣) انسخي التوكن (بيبدأ بـ ghp_) والزقيه هنا ودوسي «وصّل». استعملي نفس التوكن على الجهاز التاني.</p>
+        <div class="row"><input id="ghTok" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…" style="flex:1;min-width:0"><button class="btn primary" id="ghConnect" type="button"><span class="ar">وصّل</span></button></div>
+      </div>
+      <div id="ghOn" hidden><p class="ar">متوصل ✓ — كل إجابة بتتحفظ في GitHub وتظهر على الجهاز التاني لوحدها (خلال ثواني). وانتي بتفتحي الصفحة بتكمّلي من آخر سؤال وصلتيله على أي جهاز.</p>
+        <div class="row"><button class="btn" id="ghNow" type="button"><span class="ar">زامن دلوقتي</span></button><button class="btn" id="ghOff" type="button"><span class="ar">افصل</span></button></div></div>
+      <div class="row"><span id="ghMsg" class="ar"></span></div>
+    </details>
     <details class="xfer"><summary class="ar">نقل حلّي لجهاز تاني</summary>
       <p class="ar">على الجهاز الأول دوسي «انسخ كود الحل» وابعتيه لنفسك، وعلى الجهاز التاني الزقيه هنا ودوسي «حمّل الكود». الحل بيتجمع مع اللي على الجهاز، مش بيمسحه.</p>
       <textarea id="codeBox" rows="3" spellcheck="false" placeholder="Progress code"></textarea>
@@ -226,6 +236,7 @@ function pushRemote() {
 function save() {
   store.updatedAt = now();
   writeLocal();
+  if (typeof ghSoon === "function") ghSoon();
   if (remote) { unsynced = true; clearTimeout(remoteTimer); remoteTimer = setTimeout(pushRemote, 600); }
 }
 function flush() { if (remote && unsynced) pushRemote(); }
@@ -543,6 +554,102 @@ $("#loadCode").onclick = async () => {
   } catch (e) { xMsg("الكود ده مش سليم، انسخيه تاني كامل"); }
 };
 
+/* merge a copy saved on another device into this page; `jump` moves to the furthest question reached */
+function applyMerged(t, jump) {
+    if (!t) return;
+    const merged = mergeStores(store, t);
+    const changed = JSON.stringify(merged) !== JSON.stringify(store);
+    if (changed) { store = merged; writeLocal(); updateHardCount(); }
+    if (jump && store.set && SETS.some(x => x.id === store.set)) {          // the other device was on a different filter: follow it
+      const k = keyOf(store.set, store.order || orderSel.value, store.src, store.wrongOnly, store.hardOnly);
+      if (store.runs[k] && (!run || run.key !== k)) {
+        setSel.value = store.set; if (store.order) orderSel.value = store.order;
+        if (store.src && [...srcSel.options].some(o => o.value === store.src)) srcSel.value = store.src;
+        $("#onlyWrong").checked = !!store.wrongOnly; $("#onlyHard").checked = !!store.hardOnly;
+        start(false, { quiet: true }); return;
+      }
+    }
+    if (run) {
+      const r = store.runs[run.key];
+      if (r && r.s !== run.s) { start(false, { quiet: true }); }        // the other device's copy won: continue from it
+      else if (r) {
+        if (changed) { Object.assign(run.own, r.ans, run.own); Object.assign(run.ans, run.own); }
+        if ((r.i || 0) > run.i) { if (jump) { run.i = Math.min(r.i, run.list.length); hideAhead(); } else showAhead(r.i); }
+        if (changed || jump) render();
+      }
+    }
+}
+
+/* ---------- GitHub sync: same progress on phone and iPad (GitHub page) ---------- */
+const GH = { tok: pref("gh_tok") || "", gist: pref("gh_gist") || "", file: "derma.json", busy: false, again: false, timer: null };
+const ghMsg = (t, bad) => { const el = $("#ghMsg"); if (el) { el.textContent = t; el.style.color = bad ? "var(--bad, #c0392b)" : ""; } const d = $("#ghDot"); if (d) { d.textContent = GH.tok ? (bad ? "⚠︎ sync" : "☁︎ synced") : ""; d.className = "ghdot" + (bad ? " bad" : ""); } };
+async function gh(path, opt) {
+  opt = opt || {};
+  const r = await fetch("https://api.github.com" + path, { method: opt.method || "GET", body: opt.body, cache: "no-store", keepalive: !!opt.keepalive,
+    headers: { "Authorization": "Bearer " + GH.tok, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" } });
+  if (!r.ok) { const e = new Error("GitHub " + r.status); e.status = r.status; throw e; }
+  return r.status === 204 ? null : r.json();
+}
+async function ghGist() {
+  if (GH.gist) return GH.gist;
+  for (let page = 1; page <= 10; page++) {
+    const L = await gh("/gists?per_page=100&page=" + page);
+    const g = L.find(x => x.description === "Paradox quiz sync");
+    if (g) { GH.gist = g.id; break; }
+    if (L.length < 100) break;
+  }
+  if (!GH.gist) {
+    const g = await gh("/gists", { method: "POST", body: JSON.stringify({ description: "Paradox quiz sync", public: false, files: { [GH.file]: { content: JSON.stringify(store) } } }) });
+    GH.gist = g.id;
+  }
+  pref("gh_gist", GH.gist); return GH.gist;
+}
+async function ghPull() {
+  const g = await gh("/gists/" + GH.gist);
+  const f = g.files && g.files[GH.file]; if (!f) return null;
+  let txt = f.content;
+  if (f.truncated) txt = await (await fetch(f.raw_url, { cache: "no-store" })).text();
+  try { return JSON.parse(txt); } catch (e) { return null; }
+}
+async function ghSync(jump, leaving) {
+  if (!GH.tok) return;
+  if (GH.busy) { GH.again = true; return; }
+  GH.busy = true; clearTimeout(GH.timer);
+  try {
+    await ghGist();
+    const t = leaving ? null : await ghPull();
+    if (t) applyMerged(t, jump);
+    const mine = JSON.stringify(store);
+    if (leaving || !t || JSON.stringify(upgrade(t)) !== mine)
+      await gh("/gists/" + GH.gist, { method: "PATCH", keepalive: leaving && mine.length < 60000, body: JSON.stringify({ files: { [GH.file]: { content: mine } } }) });
+    ghMsg("☁︎ متزامن " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+  } catch (e) {
+    if (e.status === 404 && GH.gist) { GH.gist = ""; pref("gh_gist", ""); GH.again = true; }
+    else if (e.status === 401) ghMsg("التوكن مش شغال (اتلغى أو انتهى). اعملي توكن جديد والزقيه.", true);
+    else ghMsg("مفيش نت أو GitHub مش بيرد — هيحاول تاني لوحده", true);
+  } finally {
+    GH.busy = false;
+    if (GH.again) { GH.again = false; GH.timer = setTimeout(() => ghSync(false), 1200); }
+  }
+}
+function ghSoon() { if (!GH.tok) return; clearTimeout(GH.timer); GH.timer = setTimeout(() => ghSync(false), 2500); }
+document.addEventListener("visibilitychange", () => {
+  if (!GH.tok) return;
+  if (document.visibilityState === "visible") ghSync(true); else ghSync(false, true);
+});
+setInterval(() => { if (GH.tok && document.visibilityState === "visible") ghSync(false); }, 20000);
+$("#ghConnect").onclick = async () => {
+  const t = $("#ghTok").value.trim();
+  if (!t) { ghMsg("الزقي التوكن الأول", true); return; }
+  GH.tok = t; GH.gist = ""; ghMsg("بيوصّل…");
+  try { await gh("/user"); } catch (e) { GH.tok = ""; ghMsg(e.status === 401 ? "التوكن ده غلط — انسخيه تاني كامل" : "مش قادر يوصل لـ GitHub دلوقتي", true); return; }
+  pref("gh_tok", t); $("#ghTok").value = ""; ghUI(); await ghSync(true);
+};
+$("#ghNow").onclick = () => ghSync(true);
+$("#ghOff").onclick = () => { GH.tok = ""; GH.gist = ""; pref("gh_tok", ""); pref("gh_gist", ""); ghUI(); ghMsg("اتفصل. الحل لسه محفوظ على الجهاز ده."); };
+function ghUI() { $("#ghSetup").hidden = !!GH.tok; $("#ghOn").hidden = !GH.tok; ghMsg(GH.tok ? "☁︎ متوصل" : ""); }
+ghUI(); if (GH.tok) ghSync(true);
+
 /* ---------- signed-in copy: merge both ways, never overwrite newer answers ---------- */
 (async () => {
   try {
@@ -579,18 +686,7 @@ $("#loadCode").onclick = async () => {
     // merge a copy saved from another device; `jump` moves straight to the furthest question reached
     const applyRemote = (t, jump) => {
       if (!t) return;
-      const merged = mergeStores(store, t);
-      const changed = JSON.stringify(merged) !== JSON.stringify(store);
-      if (changed) { store = merged; writeLocal(); updateHardCount(); }
-      if (run) {
-        const r = store.runs[run.key];
-        if (r && r.s !== run.s) { start(false, { quiet: true }); }        // the other device's copy won: continue from it
-        else if (r) {
-          if (changed) { Object.assign(run.own, r.ans, run.own); Object.assign(run.ans, run.own); }
-          if ((r.i || 0) > run.i) { if (jump) { run.i = Math.min(r.i, run.list.length); hideAhead(); } else showAhead(r.i); }
-          if (changed || jump) render();
-        }
-      }
+      applyMerged(t, jump);
       if (JSON.stringify(upgrade(t)) !== JSON.stringify(store)) { unsynced = true; pushRemote(); }
     };
     const parse = s => { try { return s && s.exists ? JSON.parse((s.data() || {}).store || "null") : null; } catch (e) { return null; } };
