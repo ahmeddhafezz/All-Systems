@@ -456,9 +456,13 @@ function buildList(def, order, src, wrongOnly, hardOnly, noRep, hideDone) {
   if (hardOnly) list = list.filter(q => isMarked(q.id));
   if (hideDone) list = list.filter(q => !isDone(q));
   if (noRep) list = dedupe(list);
-  if (order === "rand") list = list.map(q => [Math.random(), q]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-  if (order === "rep") list = list.map((q, i) => [q, i]).sort((a, b) => (b[0].rep || 0) - (a[0].rep || 0) || a[1] - b[1]).map(x => x[0]);
-  return list;
+  // questions of the same case (same case text or case report) stay together, in their own order
+  const blocks = [], byCase = new Map();
+  list.forEach(q => { const k = q.ctx || q.img || null; if (!k) { blocks.push([q]); return; } let bl = byCase.get(k); if (!bl) { bl = []; byCase.set(k, bl); blocks.push(bl); } bl.push(q); });
+  let B = blocks.map((bl, i) => [bl, i]);
+  if (order === "rand") B = B.map(x => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+  if (order === "rep") { const r = bl => Math.max(...bl.map(q => q.rep || 0)); B.sort((a, b) => r(b[0]) - r(a[0]) || a[1] - b[1]); }
+  return B.flatMap(x => x[0]);
 }
 function start(fresh, opts) {
   const id = setSel.value, order = orderSel.value, src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked, hideDone = $("#hideDone").checked;
