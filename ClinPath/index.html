@@ -59,7 +59,7 @@ body.nokw mark.kw{background:none;padding:0}
 .schip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:var(--card)}
 .schip[aria-pressed="true"]::before{content:"✓ "}
 .schip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.ghp{direction:ltr!important;text-align:left!important}
+.ghp{direction:ltr!important;text-align:left!important}.ghp a{color:var(--accent)}
 #ghToken{width:100%;font:14px ui-monospace,monospace;border:1px solid var(--line);border-radius:9px;padding:9px;background:var(--bg);color:var(--ink);margin-bottom:8px}
 .ghmsg{font-size:14px;align-self:center;color:var(--muted)} .ghmsg.ok{color:var(--ok)} .ghmsg.bad{color:var(--bad)}
 .ghstate{font-size:12.5px;font-weight:600;margin-left:6px;color:var(--muted)} .ghstate.on{color:var(--ok)}
@@ -162,6 +162,7 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
     <details class="xfer" id="ghBox"><summary>🔄 Sync progress across devices <span id="ghState" class="ghstate"></span></summary>
       <div id="ghOff">
         <p class="ghp">Connect each device once (iPad, phone…) with the same GitHub key. Your answers are then saved to a private file in your GitHub account, and every device continues where the other stopped.</p>
+        <p class="ghp">No key yet? Open <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Paradox%20quiz%20sync" target="_blank" rel="noopener">this GitHub page</a>, set Expiration to <b>No expiration</b>, keep only <b>gist</b> ticked, tap <b>Generate token</b> and copy the key. Use the same key on every device.</p>
         <input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="GitHub key (starts with ghp_ or github_pat_)">
         <div class="row"><button class="btn primary" id="ghConnect" type="button">Connect</button><span id="ghMsg" class="ghmsg"></span></div>
       </div>
