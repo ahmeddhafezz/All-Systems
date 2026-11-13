@@ -138,7 +138,7 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
 <div class="wrap">
   <header>
     <div class="brand"><small>Paradox · Dermatology</small>MCQ Quiz</div>
-    <div class="hbtns"><a class="btn" href="atlas/index.html" style="text-decoration:none">📷 Photo atlas</a><button class="btn ico" id="kwBtn" type="button" title="Highlight keywords" aria-label="Highlight keywords">🖍</button><button class="btn ico" id="themeBtn" type="button" title="Dark mode" aria-label="Dark mode">☾</button><button class="btn" id="toggleSets" type="button">Change set</button></div>
+    <div class="hbtns"><a class="btn" id="atlasLink" href="atlas/index.html" style="text-decoration:none">📷 Photo atlas</a><script>if (!/github\.io$/.test(location.hostname) && !/^(localhost|127\.)/.test(location.hostname)) document.getElementById("atlasLink").href = "https://ahmeddhafezz.github.io/All-Systems/Derma/atlas/";</script><button class="btn ico" id="kwBtn" type="button" title="Highlight keywords" aria-label="Highlight keywords">🖍</button><button class="btn ico" id="themeBtn" type="button" title="Dark mode" aria-label="Dark mode">☾</button><button class="btn" id="toggleSets" type="button">Change set</button></div>
   </header>
 
   <section class="picker" id="picker">
