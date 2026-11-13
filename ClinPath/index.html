@@ -33,7 +33,7 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
 #pdfMsg{color:var(--accent);font-weight:700;font-size:14px}
 #pdfBtn:disabled{opacity:.6;cursor:progress}
 
-.ahead{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--tint);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;margin-block:0 12px;color:var(--navy);font-weight:700;direction:rtl}
+.ahead{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--tint);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;margin-block:0 12px;color:var(--navy);font-weight:700}
 
 :root{--kwbg:#FFEFA0}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--kwbg:rgba(250,204,21,.26)}}
@@ -47,7 +47,7 @@ body.nokw mark.kw{background:none;padding:0}
 
 .xfer{border-top:1px solid var(--line);padding-top:10px}
 .xfer summary{cursor:pointer;color:var(--accent);font-weight:700}
-.xfer p{margin:8px 0;font-size:14px;color:var(--muted);direction:rtl;text-align:right}
+.xfer p{margin:8px 0;font-size:14px;color:var(--muted)}
 .xfer textarea{width:100%;box-sizing:border-box;font:12px ui-monospace,monospace;border:1px solid var(--line);border-radius:9px;padding:8px;background:var(--bg);color:var(--ink);resize:vertical}
 #xferMsg{font-size:14px;color:var(--ok);align-self:center}
 .srcwrap{display:grid;gap:6px}
@@ -64,7 +64,7 @@ body.nokw mark.kw{background:none;padding:0}
 .ghmsg{font-size:14px;align-self:center;color:var(--muted)} .ghmsg.ok{color:var(--ok)} .ghmsg.bad{color:var(--bad)}
 .ghstate{font-size:12.5px;font-weight:600;margin-left:6px;color:var(--muted)} .ghstate.on{color:var(--ok)}
 
-.btn.mark{color:var(--muted)} .btn.mark .ar{font-family:var(--ar)}
+.btn.mark{color:var(--muted)}
 .btn.mark.on{background:rgba(224,168,0,.16);border-color:#E0A800;color:#B07D00}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.mark.on{color:#F2C14E}}
 :root[data-theme="dark"] .btn.mark.on{color:#F2C14E}
@@ -101,7 +101,7 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
 .opt.wrong .L{color:var(--bad)}
 .fb{border-radius:12px;padding:14px 16px;display:grid;gap:6px}
 .fb.ok{background:var(--ok-bg)} .fb.no{background:var(--bad-bg)}
-.fb h3{margin:0;font:700 17px var(--ar);direction:rtl;text-align:right}
+.fb h3{margin:0;font:700 17px var(--body)}
 .fb.ok h3{color:var(--ok)} .fb.no h3{color:var(--bad)}
 .fb p{margin:0}
 .why{font-size:15.5px}
@@ -113,7 +113,7 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
 .nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .end{text-align:center;display:grid;gap:10px;justify-items:center}
 .big{font-family:var(--display);font-size:44px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
-.ar{font-family:var(--ar);direction:rtl}
+.ar{}
 .empty{color:var(--muted);font-size:14px}
 /* one colour per system: chip + card edge */
 .card.sys{border-left:6px solid var(--sysfg)}
@@ -157,7 +157,7 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
     </div>
     <div class="row pdfrow">
       <label for="pdfMode">PDF of this filter<select id="pdfMode"><option value="key">Questions + answer key at the end</option><option value="expl">Answer &amp; explanation under each question</option></select></label>
-      <button class="btn" id="pdfBtn" type="button">⤓ <span class="ar">نزّلي الفلتر ده PDF</span></button><span id="pdfMsg" class="ar"></span>
+      <button class="btn" id="pdfBtn" type="button">⤓ <span class="ar">Download this filter as PDF</span></button><span id="pdfMsg" class="ar"></span>
     </div>
     <details class="xfer" id="ghBox"><summary>🔄 Sync progress across devices <span id="ghState" class="ghstate"></span></summary>
       <div id="ghOff">
@@ -170,10 +170,10 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
         <div class="row"><button class="btn" id="ghNow" type="button">Sync now</button><button class="btn" id="ghOut" type="button">Disconnect this device</button><span id="ghMsg2" class="ghmsg"></span></div>
       </div>
     </details>
-    <details class="xfer"><summary class="ar">نقل حلّي لجهاز تاني</summary>
-      <p class="ar">على الجهاز الأول دوسي «انسخ كود الحل» وابعتيه لنفسك، وعلى الجهاز التاني الزقيه هنا ودوسي «حمّل الكود». الحل بيتجمع مع اللي على الجهاز، مش بيمسحه.</p>
+    <details class="xfer"><summary class="ar">Move my progress to another device (manual code)</summary>
+      <p class="ar">On the first device tap “Copy progress code” and send it to yourself; on the other device paste it here and tap “Load code”. It is combined with the progress already on that device, nothing is erased.</p>
       <textarea id="codeBox" rows="3" spellcheck="false" placeholder="Progress code"></textarea>
-      <div class="row"><button class="btn" id="copyCode" type="button"><span class="ar">انسخ كود الحل</span></button><button class="btn" id="loadCode" type="button"><span class="ar">حمّل الكود</span></button><span id="xferMsg" class="ar"></span></div>
+      <div class="row"><button class="btn" id="copyCode" type="button"><span class="ar">Copy progress code</span></button><button class="btn" id="loadCode" type="button"><span class="ar">Load code</span></button><span id="xferMsg" class="ar"></span></div>
     </details>
   </section>
 
@@ -392,11 +392,11 @@ function showAhead(i) {
   let bar = document.getElementById("aheadBar");
   if (!bar) {
     bar = document.createElement("div"); bar.id = "aheadBar"; bar.className = "ahead ar";
-    bar.innerHTML = '<span></span><button class="btn primary" type="button">كمّلي من هناك</button>';
+    bar.innerHTML = '<span></span><button class="btn primary" type="button">Continue from there</button>';
     document.getElementById("main").before(bar);
     bar.querySelector("button").onclick = () => { const r = store.runs[run.key]; if (r) run.i = Math.min(r.i || run.i, run.list.length); hideAhead(); persist(); render(); window.scrollTo({ top: 0 }); };
   }
-  bar.querySelector("span").textContent = "وصلتي لسؤال " + Math.min(i + 1, run.list.length) + " على جهاز تاني";
+  bar.querySelector("span").textContent = "You reached question " + Math.min(i + 1, run.list.length) + " on another device";
   bar.hidden = false;
 }
 function hideAhead() { const bar = document.getElementById("aheadBar"); if (bar) bar.hidden = true; }
@@ -532,7 +532,7 @@ function render() {
   const pic = QIMG[q.img] ? (() => { const im = document.createElement("img"); im.className = "qimg"; im.alt = "Question picture"; im.src = "data:image/jpeg;base64," + QIMG[q.img][2]; im.alt = "Case report"; return im; })() : null;
   card.append(...[meta, ctxEl, pic, stem, opts, nav, fb].filter(Boolean)); m.appendChild(card);
   const mk = $("#markB");
-  const setMk = () => { const on = isMarked(q.id); mk.classList.toggle("on", on); mk.setAttribute("aria-pressed", on ? "true" : "false"); mk.innerHTML = on ? '★ <span class="ar">متعلّم صعب</span>' : '☆ <span class="ar">علّمه صعب</span>'; };
+  const setMk = () => { const on = isMarked(q.id); mk.classList.toggle("on", on); mk.setAttribute("aria-pressed", on ? "true" : "false"); mk.innerHTML = on ? '★ <span class="ar">Marked hard</span>' : '☆ <span class="ar">Mark as hard</span>'; };
   setMk();
   mk.onclick = () => { store.marks[q.id] = [isMarked(q.id) ? 0 : 1, now()]; save(); setMk(); updateHardCount(); };
   $("#prevB").disabled = run.i === 0;
@@ -556,7 +556,7 @@ function paint(q, L) {
   const fb = $("#fb"); fb.className = "fb " + (ok ? "ok" : "no");
   const right = q.ans.map(a => a + ". " + q.opts[q.letters.indexOf(a)]).join("  /  ");
   const h = document.createElement("h3");
-  h.textContent = ok ? "✓ إجابة صح" : "✗ إجابة غلط";
+  h.textContent = ok ? "✓ Correct" : "✗ Wrong";
   fb.appendChild(h);
   if (!ok) { const p = document.createElement("p"); p.innerHTML = "<b>Your answer:</b> "; p.append(L + ". " + q.opts[q.letters.indexOf(L)]); fb.appendChild(p); }
   const pr = document.createElement("p"); pr.innerHTML = "<b>Correct answer:</b> "; pr.append(q.flag === "ALL" ? "Counted correct for everyone" : right); fb.appendChild(pr);
@@ -577,7 +577,7 @@ function paint(q, L) {
 }
 function renderEnd() {
   const m = $("#main"); const n = run.list.length; const pct = n ? Math.round(run.ok / n * 100) : 0;
-  m.innerHTML = '<div class="card end"><div class="ar">النتيجة</div><div class="big"></div><div class="stats"></div><div class="nav"><button class="btn" id="backB" type="button">Back to last question</button><button class="btn" id="again" type="button">Retry this set</button><button class="btn primary" id="wrongOnly" type="button">Retry my wrong answers</button><button class="btn mark on" id="hardB" type="button">★ <span class="ar">راجع الأسئلة الصعبة</span></button></div></div>';
+  m.innerHTML = '<div class="card end"><div class="ar">Result</div><div class="big"></div><div class="stats"></div><div class="nav"><button class="btn" id="backB" type="button">Back to last question</button><button class="btn" id="again" type="button">Retry this set</button><button class="btn primary" id="wrongOnly" type="button">Retry my wrong answers</button><button class="btn mark on" id="hardB" type="button">★ <span class="ar">Review hard questions</span></button></div></div>';
   m.querySelector(".big").textContent = run.ok + " / " + n + "  (" + pct + "%)";
   m.querySelector(".stats").textContent = "Wrong: " + run.no + " · Not answered: " + (n - run.ok - run.no);
   $("#backB").onclick = () => { run.i = Math.max(0, n - 1); persist(); render(); };
@@ -625,15 +625,15 @@ async function unpackStore(code) {
 const xMsg = t => { $("#xferMsg").textContent = t; };
 $("#copyCode").onclick = async () => {
   const code = await packStore(); const ta = $("#codeBox"); ta.value = code; ta.select();
-  try { await navigator.clipboard.writeText(code); xMsg("اتنسخ ✓ ابعتيه لنفسك وافتحيه على الجهاز التاني"); }
-  catch (e) { try { document.execCommand("copy"); xMsg("اتنسخ ✓"); } catch (e2) { xMsg("الكود في المربع: اختاريه كله وانسخيه"); } }
+  try { await navigator.clipboard.writeText(code); xMsg("Copied ✓ Send it to yourself and open it on the other device"); }
+  catch (e) { try { document.execCommand("copy"); xMsg("Copied ✓"); } catch (e2) { xMsg("The code is in the box: select all of it and copy"); } }
 };
 $("#loadCode").onclick = async () => {
   try {
     const theirs = await unpackStore($("#codeBox").value);
     store = mergeStores(store, theirs); save(); updateHardCount();
-    start(false, { quiet: true }); xMsg("اتحمّل ✓ واتجمع مع حلّك على الجهاز ده");
-  } catch (e) { xMsg("الكود ده مش سليم، انسخيه تاني كامل"); }
+    start(false, { quiet: true }); xMsg("Loaded ✓ and combined with your progress on this device");
+  } catch (e) { xMsg("That code isn't valid — copy the whole code again"); }
 };
 
 /* ---------- synced copy: merge both ways, never overwrite newer answers ---------- */
@@ -1091,7 +1091,7 @@ $("#pdfBtn").onclick = async () => {
   const id = setSel.value, src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked, hideDone = $("#hideDone").checked, mode = $("#pdfMode").value;
   const def = SETS.find(s => s.id === id) || SETS[0];
   const list = buildList(def, orderSel.value === "rep" ? "rep" : "seq", src, wrongOnly, hardOnly, noRep, hideDone);
-  if (!list.length) { msg("الفلتر ده مفيهوش أسئلة"); return; }
+  if (!list.length) { msg("This filter has no questions"); return; }
   pdfBusy = true; $("#pdfBtn").disabled = true;
   try {
     const title = SET_EN[def.id] || def.label.replace(/^Chapter: /, "");
@@ -1103,14 +1103,14 @@ $("#pdfBtn").onclick = async () => {
       foot: ("CLINICAL PATHOLOGY  |  " + title).toUpperCase().slice(0, 90),
       info: [["QUESTIONS", String(list.length)], ["SET", title], ["ANSWERS", mode === "key" ? "Key at the end" : "Under each question"], ["DATE", date]]
     };
-    msg("بيتجهز… 0%");
-    const blob = await PX.make(list, o, p => msg("بيتجهز… " + p + "%"));
+    msg("Preparing… 0%");
+    const blob = await PX.make(list, o, p => msg("Preparing… " + p + "%"));
     const name = "Paradox ClinPath - " + title.replace(/[\/\\:*?"<>|·]+/g, "-").replace(/\s+/g, " ").replace(/-+/g, "-").trim() + (wrongOnly ? " - wrong" : "") + (hardOnly ? " - hard" : "") + ".pdf";
-    msg("خلص ✓ (" + list.length + " سؤال)");
+    msg("Done ✓ (" + list.length + " questions)");
     const r = await savePdf(blob, name);
-    if (r === "declined") msg("التحميل اتلغى");
-    else if (r === "rate_limited") msg("فيه تحميل مفتوح بالفعل، كمّليه الأول");
-  } catch (e) { msg("حصلت مشكلة في عمل الملف، جربي تاني"); console.error(e); }
+    if (r === "declined") msg("Download cancelled");
+    else if (r === "rate_limited") msg("A download is already open — finish it first");
+  } catch (e) { msg("Something went wrong making the file — try again"); console.error(e); }
   pdfBusy = false; $("#pdfBtn").disabled = false;
 };
 
