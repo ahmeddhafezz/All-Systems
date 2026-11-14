@@ -43,6 +43,8 @@ strong.neg{color:var(--bad);text-decoration:underline;text-decoration-thickness:
 body.nokw mark.kw{background:none;padding:0}
 .hbtns{display:flex;gap:8px;align-items:center}
 .btn.ico{min-width:40px;padding:9px 10px;font-size:16px;line-height:1}
+#showAnsBtn[aria-pressed="true"]{background:var(--navy,#25234f);border-color:var(--navy,#25234f);color:#fff}
+.fb.reveal{border-color:var(--line)}
 #kwBtn.on{background:var(--kwbg)}
 
 .xfer{border-top:1px solid var(--line);padding-top:10px}
@@ -138,7 +140,7 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
 <div class="wrap">
   <header>
     <div class="brand"><small>Paradox · Clinical Pathology</small>MCQ Quiz</div>
-    <div class="hbtns"><button class="btn ico" id="kwBtn" type="button" title="Highlight keywords" aria-label="Highlight keywords">🖍</button><button class="btn ico" id="themeBtn" type="button" title="Dark mode" aria-label="Dark mode">☾</button><button class="btn" id="toggleSets" type="button">Change set</button></div>
+    <div class="hbtns"><button class="btn" id="showAnsBtn" type="button" aria-pressed="false" title="Show every answer straight away, without solving">👁 Show answers</button><button class="btn ico" id="kwBtn" type="button" title="Highlight keywords" aria-label="Highlight keywords">🖍</button><button class="btn ico" id="themeBtn" type="button" title="Dark mode" aria-label="Dark mode">☾</button><button class="btn" id="toggleSets" type="button">Change set</button></div>
   </header>
 
   <section class="picker" id="picker">
@@ -544,6 +546,7 @@ function render() {
   $("#prevB").onclick = () => { run.i--; persist(); render(); };
   $("#nextB").onclick = () => { run.i++; persist(); render(); window.scrollTo({ top: 0 }); };
   if (run.ans[q.id]) paint(q, run.ans[q.id]);
+  else if (showAns) paint(q, null);
 }
 function choose(q, L) {
   if (run.ans[q.id]) return;
@@ -552,16 +555,16 @@ function choose(q, L) {
   persist(); render();
 }
 function paint(q, L) {
-  const ok = good(q, L);
+  const ok = L ? good(q, L) : true;
   document.querySelectorAll(".opt").forEach(b => {
     b.disabled = true;
     if (q.ans.includes(b.dataset.l)) b.classList.add("right");
-    else if (b.dataset.l === L) b.classList.add("wrong");
+    else if (L && b.dataset.l === L) b.classList.add("wrong");
   });
-  const fb = $("#fb"); fb.className = "fb " + (ok ? "ok" : "no");
+  const fb = $("#fb"); fb.className = "fb " + (!L ? "ok reveal" : ok ? "ok" : "no");
   const right = q.ans.map(a => a + ". " + q.opts[q.letters.indexOf(a)]).join("  /  ");
   const h = document.createElement("h3");
-  h.textContent = ok ? "✓ Correct" : "✗ Wrong";
+  h.textContent = !L ? "👁 Answer (not counted in your score)" : ok ? "✓ Correct" : "✗ Wrong";
   fb.appendChild(h);
   if (!ok) { const p = document.createElement("p"); p.innerHTML = "<b>Your answer:</b> "; p.append(L + ". " + q.opts[q.letters.indexOf(L)]); fb.appendChild(p); }
   const pr = document.createElement("p"); pr.innerHTML = "<b>Correct answer:</b> "; pr.append(q.flag === "ALL" ? "Counted correct for everyone" : right); fb.appendChild(pr);
@@ -580,6 +583,11 @@ function paint(q, L) {
   if (EXPL["src:" + q.id]) src.push(EXPL["src:" + q.id]);
   if (src.length) { const s = document.createElement("p"); s.className = "src"; s.textContent = "Source: " + src.join(" · "); fb.appendChild(s); }
 }
+var showAns = false; try { showAns = localStorage.getItem("cpq-show-answers") === "1"; } catch (e) {}
+function setShowAns(on) {
+  showAns = on; try { localStorage.setItem("cpq-show-answers", on ? "1" : "0"); } catch (e) {}
+  const b = $("#showAnsBtn"); b.setAttribute("aria-pressed", on ? "true" : "false"); b.textContent = on ? "👁 Answers shown" : "👁 Show answers";
+}
 function renderEnd() {
   const m = $("#main"); const n = run.list.length; const pct = n ? Math.round(run.ok / n * 100) : 0;
   m.innerHTML = '<div class="card end"><div class="ar">Result</div><div class="big"></div><div class="stats"></div><div class="nav"><button class="btn" id="backB" type="button">Back to last question</button><button class="btn" id="again" type="button">Retry this set</button><button class="btn primary" id="wrongOnly" type="button">Retry my wrong answers</button><button class="btn mark on" id="hardB" type="button">★ <span class="ar">Review hard questions</span></button></div></div>';
@@ -590,6 +598,8 @@ function renderEnd() {
   $("#wrongOnly").onclick = () => { $("#onlyWrong").checked = true; $("#onlyHard").checked = false; $("#hideDone").checked = false; start(true); };
   $("#hardB").onclick = () => { $("#onlyWrong").checked = false; $("#onlyHard").checked = true; $("#hideDone").checked = false; start(false); };
 }
+$("#showAnsBtn").onclick = () => { setShowAns(!showAns); if (run) render(); };
+setShowAns(showAns); if (showAns && typeof run !== "undefined" && run) render();
 $("#startBtn").onclick = () => start(false);
 $("#restartBtn").onclick = () => start(true);
 $("#toggleSets").onclick = () => { $("#picker").hidden = !$("#picker").hidden; };
