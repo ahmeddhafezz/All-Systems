@@ -24,6 +24,10 @@ Open `index.html` (or the GitHub Pages link). Tap a card to flip it, then mark P
 
 `ClinPath/` holds the Paradox clinical pathology MCQ quiz: every MCQ and case question from the Kasr Al-Ainy department question book, plus past exams from 2018 to 2025 (written papers and oral sheets with choices). Each question appears once, with the exams it came in; case questions show their lab report. Answers, short explanations and the Clinical Pathology Part I page are under each question. Open `ClinPath/index.html` (or the GitHub Pages link + `/ClinPath/`). Progress is saved in your browser, separately from the other quizzes; sync between devices uses the same GitHub key, in its own private gist file `clinpath-progress.json`.
 
+## ECG
+
+`ECG/` holds the ECG flashcards: the 39 ECGs of the ECG Practice Pack in its three tiers (Tier 1 must know #1–18, Tier 2 likely #19–29, Tier 3 recognize only #30–39). The front is the case and the ECG; "Show hint" reveals the pack's clue. Tap the card for the full comment from the pack, and for the six Dr. Hala past-exam ECGs also her own comment as written. Photographed ECGs were straightened and redrawn from the same trace and grid ("View original photo" shows the photo); the rest are cleaned up and sharpened. "Enlarge" opens the ECG full size to pinch and scroll. Pass/Fail, Failed list, Past-exams filter, Shuffle/Unshuffle and device sync work like the Derma atlas (private gist file `ecg-progress.json`, same GitHub key). Open `ECG/index.html` (or the GitHub Pages link + `/ECG/`).
+
 ## Notes
 
 `Notes/` is a PDF writing page for iPad with a stylus: open any PDF from Files and write on it with Pen, Marker, Pencil, straight line and Eraser, with Undo/Redo, colours and thickness. Pinch and double-tap zoom are switched off so drawing circles or S shapes doesn't zoom the page; use the − / ＋ buttons to zoom and ✋ to scroll. Notes are saved automatically in this browser, and "⤓ PDF" downloads a copy of the PDF with your writing on it. Open `Notes/index.html` (or the GitHub Pages link + `/Notes/`).

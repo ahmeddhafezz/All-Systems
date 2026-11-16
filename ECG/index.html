@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ECG Practice Pack · Flashcards</title>
+<style>
+:root{--bg:#f4f3fa;--card:#fff;--ink:#1f1d33;--muted:#6b6880;--line:#e2e0ee;--navy:#25234f;--accent:#6b5ca8;--tint:#efecf8;--ok:#1e8a4c;--okbg:#e3f5ea;--bad:#c0392b;--badbg:#fbe7e5;--pink:#B0236B;--pinkbg:#FBE6F1;
+  --body:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+@media (prefers-color-scheme: dark){:root{--bg:#15141f;--card:#1f1e2c;--ink:#ecebf5;--muted:#a3a0b8;--line:#33314a;--navy:#cfcaf5;--accent:#b3a6f0;--tint:#2a2840;--okbg:#173524;--badbg:#3a1d1a;--pink:#F59BC8;--pinkbg:#3B1A2C}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+.wrap{max-width:820px;margin:0 auto;padding:18px 16px calc(40px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.brand{font-weight:800;color:var(--navy);font-size:26px;line-height:1.1;letter-spacing:-.01em}
+.brand small{display:block;font-weight:700;font-size:12.5px;color:var(--accent);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px}
+.btn{font:600 15px var(--body);border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent}
+.btn:hover{border-color:var(--accent)} .btn.primary{background:var(--navy);border-color:var(--navy);color:var(--card)}
+.btn.pass{background:var(--ok);border-color:var(--ok);color:#fff} .btn.fail{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.lbl{font-size:13px;font-weight:700;color:var(--muted);margin:0 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{font:600 14px var(--body);border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:var(--card)}
+.chip[aria-pressed="true"]::before{content:"✓ "}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.stats{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted);margin:4px 0 10px}
+.stats b{color:var(--ink)} .stats .p b{color:var(--ok)} .stats .f b{color:var(--bad)}
+.bar{height:6px;background:var(--line);border-radius:9px;overflow:hidden;margin-bottom:8px}.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+.fc{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--pink);border-radius:18px;padding:14px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.fc .top{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);margin-bottom:10px}
+.tag{background:var(--pinkbg);color:var(--pink);font-weight:700;border-radius:999px;padding:2px 10px;font-size:12.5px}
+.state{font-weight:700} .state.p{color:var(--ok)} .state.f{color:var(--bad)}
+.pic{display:flex;justify-content:center;align-items:center;background:var(--bg);border-radius:12px;min-height:260px;overflow:hidden}
+.pic img{display:block;max-width:100%;max-height:58vh;width:auto;height:auto;border-radius:6px}
+.hint{text-align:center;color:var(--muted);font-size:14px;margin-top:10px}
+.ans{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--tint)}
+.ans .name{font-size:22px;font-weight:800;color:var(--navy);line-height:1.2}
+.ans .meta{font-size:14px;color:var(--muted);margin-top:4px}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.acts .btn{justify-content:center;padding:14px;font-size:17px}
+.nav{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
+.empty{text-align:center;padding:30px 10px;color:var(--muted)}
+details summary{cursor:pointer;color:var(--accent);font-weight:700}
+#optBox>summary{color:var(--navy)}
+.xfer p{font-size:14px;color:var(--muted);margin:8px 0} .xfer a{color:var(--accent)}
+#ghToken{width:100%;font:14px ui-monospace,monospace;border:1px solid var(--line);border-radius:9px;padding:9px;background:var(--bg);color:var(--ink);margin-bottom:8px}
+.ghmsg{font-size:14px;color:var(--muted)} .ghmsg.ok{color:var(--ok)} .ghmsg.bad{color:var(--bad)}
+.ghstate{font-size:12.5px;margin-left:6px;color:var(--muted)} .ghstate.on{color:var(--ok)}
+.zoom{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:9;padding:10px}
+.zoom img{max-width:100%;max-height:100%}
+.zoom[hidden]{display:none}
+
+.fc{border-left-color:var(--navy)}
+.tag.t1{background:#fde8e6;color:#b42318}.tag.t2{background:#fff3d6;color:#9a6200}.tag.t3{background:#e6f0fb;color:#1c5fa8}
+@media (prefers-color-scheme: dark){.tag.t1{background:#3a1d1a;color:#ff9c8f}.tag.t2{background:#3a2f12;color:#ffd27a}.tag.t3{background:#16283d;color:#8cc1ff}}
+.src{font-size:12.5px;font-weight:700;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}.src.past{color:var(--bad)}
+.stem{font-size:16.5px;margin:2px 0 10px;font-weight:600}
+.pic{min-height:120px;background:#fff;padding:4px}
+.pic img{max-height:none;width:100%}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.tools .btn{padding:8px 12px;font-size:14px}
+.btn.on{background:var(--tint);border-color:var(--accent)}
+.clue{margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff7e0;color:#5b4300;font-size:15px}
+@media (prefers-color-scheme: dark){.clue{background:#3a2f12;color:#ffe3a0}}
+.clue b{color:inherit}
+.ans{background:var(--tint)}
+.ans .lab{font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:2px 0 8px}
+.ans img{cursor:zoom-in;display:block;width:100%;max-width:560px;height:auto;background:#fff;border-radius:8px;padding:6px}
+.hala{margin-top:12px;background:#fff;color:#1f1d33;border-radius:8px;padding:10px 12px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5}
+.hala .dx{font-weight:700;margin-top:6px}
+.zoom{display:block;overflow:auto;padding:0;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom}
+.zoom img{max-width:none;max-height:none;width:200vw;background:#fff}
+.zoom .zx{position:fixed;top:calc(10px + env(safe-area-inset-top));right:10px;z-index:10;background:#fff;color:#000;border:0;border-radius:999px;font:700 16px var(--body);padding:8px 14px}
+.zoom .zz{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));right:10px;z-index:10;display:flex;gap:6px}
+.zoom .zz button{background:#fff;color:#000;border:0;border-radius:999px;font:700 18px var(--body);width:44px;height:44px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><small>Internal Medicine · ECG</small>ECG Flashcards</div>
+  </header>
+
+  <details class="panel" id="optBox"><summary id="optSum">⚙︎ Tiers &amp; options</summary><div style="margin-top:10px">
+    <p class="lbl">Tiers <span style="font-weight:400">· tap to pick one or more</span></p>
+    <div class="chips" id="chapChips"></div>
+    <p class="lbl">Show</p>
+    <div class="chips" id="catChips"></div>
+    <div class="row">
+      <button class="btn" id="shufB" type="button">🔀 Shuffle</button>
+      <button class="btn" id="unshufB" type="button">↩︎ Unshuffle (pack order)</button>
+      <button class="btn" id="resetB" type="button">Reset progress</button>
+    </div>
+    <details class="xfer" id="ghBox" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><summary>🔄 Sync progress across devices <span id="ghState" class="ghstate"></span></summary>
+      <div id="ghOff">
+        <p>Uses the same GitHub key as the Derma, Clinical Pathology and MCQ quizzes; if this device is already connected there, it connects here by itself.</p>
+        <p>No key yet? Open <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Paradox%20quiz%20sync" target="_blank" rel="noopener">this GitHub page</a>, set Expiration to <b>No expiration</b>, keep only <b>gist</b> ticked, tap <b>Generate token</b> and copy the key.</p>
+        <input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="GitHub key (starts with ghp_ or github_pat_)">
+        <div class="row"><button class="btn primary" id="ghConnect" type="button">Connect</button><span id="ghMsg" class="ghmsg"></span></div>
+      </div>
+      <div id="ghOn" hidden>
+        <p>This device is synced. Last sync: <b id="ghLast">—</b></p>
+        <div class="row"><button class="btn" id="ghNow" type="button">Sync now</button><button class="btn" id="ghOut" type="button">Disconnect this device</button><span id="ghMsg2" class="ghmsg"></span></div>
+      </div>
+    </details>
+  </div></details>
+
+  <div class="bar"><i id="barFill"></i></div>
+  <div class="stats" id="stats"></div>
+  <main id="main"></main>
+</div>
+<div class="zoom" id="zoom" hidden><button class="zx" id="zoomX" type="button">✕ Close</button><div class="zz"><button id="zOut" type="button">−</button><button id="zIn" type="button">＋</button></div><img id="zoomImg" alt="ECG enlarged"></div>
+
+<script>
+const CARDS = [{"n": 1, "t": 1, "s": "PAST EXAM · DR. HALA", "px": true, "q": "A 37-year-old man has been diagnosed with hypertension. Interpret his ECG.", "cl": "A trap: hypertension tempts you to write LVH. Check the voltage first (S V1 + R V5/V6 < 7 big squares = normal).", "dx": "Normal ECG", "img": "img/e01.jpg", "w": 2400, "h": 1528, "orig": "img/o01.jpg", "rd": true, "back": "img/b01.png", "bw": 945, "bh": 500, "hala": ["_ Rhythm: Regular", "_ Rate : about 75 beats/min ( normal)", "_ Axis : Normal deviation", "_ P-wave : Normal", "_ PR interval : Normal", "_ QRS complex : Normal", "_ ST segment : Normal", "_ T-wave : Normal", "Diagnosis: Normal ECG"]}, {"n": 2, "t": 1, "s": "ECG FULL COMMENT, P. 1", "px": false, "q": "Severe crushing central chest pain with a normal troponin.", "cl": "ST depression in one territory, with no ST elevation and no Q = ischemia.", "dx": "Anterolateral myocardial ischemia (LAD territory)", "img": "img/e02.jpg", "w": 1938, "h": 974, "orig": "img/o02.jpg", "rd": false, "back": "img/b02.png", "bw": 946, "bh": 546, "hala": null}, {"n": 3, "t": 1, "s": "PAST EXAM · DR. HALA", "px": true, "q": "A 66-year-old male complaining of retrosternal chest pain. Interpret his ECG.", "cl": "T inversion only in the lateral leads (I, aVL, V5, V6), with no Q and no ST elevation = lateral ischemia (circumflex).", "dx": "Lateral wall ischemia", "img": "img/e03.jpg", "w": 1773, "h": 900, "orig": "img/o03.jpg", "rd": true, "back": "img/b03.png", "bw": 946, "bh": 500, "hala": ["_ Rhythm: Regular", "_ Rate : about …..", "_ Axis : Left axis deviation", "_ P-wave : Normal", "_ PR interval : Normal", "_ QRS complex : Normal", "_ ST segment : Normal", "_ T-wave : inverted in lead I , aVL , v5 , v6", "Diagnosis: Lateral wall Ischemia"]}, {"n": 4, "t": 1, "s": "PAST EXAM · DR. HALA (2023)", "px": true, "q": "A 65-year-old man presents with severe chest pain. Interpret his ECG.", "cl": "ST elevation across V1–V6 (anterior + lateral chest leads) = acute anterolateral MI (LAD).", "dx": "Acute anterolateral myocardial infarction", "img": "img/e04.jpg", "w": 2400, "h": 1051, "orig": "img/o04.jpg", "rd": true, "back": "img/b04.png", "bw": 946, "bh": 546, "hala": ["_ Rhythm: Regular", "_ Rate : about 75 beats/ min", "_ Axis : Left axis deviation", "_ P-wave : Normal", "_ PR interval : Normal", "_ QRS complex :  Q-wave in v1 and v 2", "_ ST segment : elevation in all v ( v1,v2, v3 , v4, v5, v6)", "_ T-wave : Normal", "Diagnosis:  Acute anterolateral  Myocardial Infarction ( MI)"]}, {"n": 5, "t": 1, "s": "PAST EXAM · 2025", "px": true, "q": "A 60-year-old female complaining of chest pain. A- Comment on the ECG. B- What is your interpretation of these findings?", "cl": "Tombstone ST elevation V1–V5 with QS waves; Q in I and aVL adds the high-lateral wall. The lateral MI also explains the right axis.", "dx": "Acute extensive anterior STEMI (LAD occlusion)", "img": "img/e05.jpg", "w": 1932, "h": 1424, "orig": "img/o05.jpg", "rd": false, "back": "img/b05.png", "bw": 945, "bh": 627, "hala": null}, {"n": 6, "t": 1, "s": "ECG FULL COMMENT, P. 14", "px": false, "q": "Comment on this ECG.", "cl": "ST elevation + Q in II, III, aVF = inferior wall (right coronary).", "dx": "Acute inferior myocardial infarction (RCA)", "img": "img/e06.jpg", "w": 1584, "h": 954, "orig": "img/o06.jpg", "rd": false, "back": "img/b06.png", "bw": 946, "bh": 547, "hala": null}, {"n": 7, "t": 1, "s": "ECG FULL COMMENT, P. 7", "px": false, "q": "Comment on this ECG.", "cl": "Pathological Q = old MI (the MI fingerprint). T inversion in I, aVL, V5–V6 = lateral ischemia on top.", "dx": "Old anterior wall MI with lateral ischemia", "img": "img/e07.jpg", "w": 1676, "h": 916, "orig": "img/o07.jpg", "rd": false, "back": "img/b07.png", "bw": 946, "bh": 546, "hala": null}, {"n": 8, "t": 1, "s": "PAST EXAM · DR. HALA", "px": true, "q": "A 35-year-old female with rheumatic heart disease presents with palpitation. Interpret her ECG strip.", "cl": "Irregularly irregular + no P waves = AF. Rheumatic mitral disease is the classic cause.", "dx": "Atrial fibrillation (AF)", "img": "img/e08.jpg", "w": 2400, "h": 960, "orig": "img/o08.jpg", "rd": true, "back": "img/b08.png", "bw": 946, "bh": 500, "hala": ["_ Rhythm: Irregular", "_ Rate : about 100 beats/min", "_ Axis : Can’t be determined", "_ P-wave : Absolutely replaced by Fibrillation wave ( F-wave)", "_ PR interval : Absent", "_ QRS complex : Normal in Shape but Irregular in Rhythm", "_ ST segment : Normal", "_ T-wave : Normal", "Diagnosis: Atrial Fibrillation ( AF)"]}, {"n": 9, "t": 1, "s": "ECG FULL COMMENT, P. 129", "px": false, "q": "Comment on this rhythm strip.", "cl": "Saw-tooth baseline. Count F waves per QRS to get the ratio (2:1, 4:1, variable).", "dx": "Atrial flutter with 4:1 block", "img": "img/e09.jpg", "w": 1844, "h": 410, "orig": "img/o09.jpg", "rd": false, "back": "img/b09.png", "bw": 945, "bh": 541, "hala": null}, {"n": 10, "t": 1, "s": "PAST EXAM · DR. HALA", "px": true, "q": "A 50-year-old woman complaining of palpitation. Comment on her rhythm strip.", "cl": "Regular rhythm interrupted by an early, wide, bizarre beat with no P wave = ventricular extrasystole.", "dx": "Ventricular extrasystole", "img": "img/e10.jpg", "w": 2400, "h": 622, "orig": "img/o10.jpg", "rd": true, "back": "img/b10.png", "bw": 946, "bh": 541, "hala": ["_ Rhythm: Occasional Irregularity", "_ Rate : about 75 beats / min (normal)", "_ Axis : Can’t be determined", "_ P-wave : Normal", "_ PR interval : Normal", "_ QRS complex : Normal  with occasional large QRS", "_ ST segment : Normal", "_ T-wave : Normal", "Diagnosis: Ventricular Extra-Systole"]}, {"n": 11, "t": 1, "s": "ECG FULL COMMENT, P. 124", "px": false, "q": "Comment on this rhythm strip.", "cl": "Normal, ectopic, normal, ectopic: every 2nd beat is a ventricular extrasystole.", "dx": "Ventricular bigeminy", "img": "img/e11.jpg", "w": 1888, "h": 376, "orig": "img/o11.jpg", "rd": false, "back": "img/b11.png", "bw": 946, "bh": 582, "hala": null}, {"n": 12, "t": 1, "s": "ECG FULL COMMENT, P. 98", "px": false, "q": "Comment on this rhythm strip.", "cl": "Fast + regular + WIDE bizarre QRS = VT.", "dx": "Ventricular tachycardia (VT)", "img": "img/e12.jpg", "w": 1874, "h": 414, "orig": "img/o12.jpg", "rd": false, "back": "img/b12.png", "bw": 946, "bh": 502, "hala": null}, {"n": 13, "t": 1, "s": "PAST EXAM · DR. HALA", "px": true, "q": "A 60-year-old woman known with hypertension presents for check-up. Interpret her ECG.", "cl": "Wide QRS + rabbit ears (M) in V5–V6 = LBBB. With LBBB, don't diagnose LVH or MI on top.", "dx": "Left bundle branch block (LBBB)", "img": "img/e13.jpg", "w": 2325, "h": 1155, "orig": "img/o13.jpg", "rd": true, "back": "img/b13.png", "bw": 945, "bh": 541, "hala": ["_ Rhythm: Regular", "_ Rate : about  100  beats/min", "_ Axis : Left axis deviation", "_ P-wave : Normal", "_ PR interval : Normal", "_ QRS complex : Notched in v5 and v6", "_ ST segment : Normal ( not obvious)", "_ T-wave : inverted", "Diagnosis: Left Bundle Branch Block ( Lt. BBB)"]}, {"n": 14, "t": 1, "s": "PAST EXAM · 2025", "px": true, "q": "ECG of a patient presenting with dizziness. Comment on the ECG.", "cl": "Two problems at once: irregular with no P (AF) + wide QRS with M in V5–V6 (LBBB).", "dx": "Atrial fibrillation with left bundle branch block", "img": "img/e14.jpg", "w": 2400, "h": 1161, "orig": "img/o14.jpg", "rd": true, "back": "img/b14.png", "bw": 946, "bh": 670, "hala": null}, {"n": 15, "t": 1, "s": "ECG FULL COMMENT, P. 110", "px": false, "q": "Comment on this ECG.", "cl": "Wide QRS + rabbit ears (M) in V1–V2 = RBBB.", "dx": "Right bundle branch block (RBBB)", "img": "img/e15.jpg", "w": 1996, "h": 1010, "orig": "img/o15.jpg", "rd": false, "back": "img/b15.png", "bw": 946, "bh": 502, "hala": null}, {"n": 16, "t": 1, "s": "ECG FULL COMMENT, P. 54", "px": false, "q": "Comment on this ECG.", "cl": "Normal pattern exaggerated: deep S in V1–V2 + tall R in V5–V6 ≥ 7 big squares = LVH. Lateral ST↓ and T inversion = strain.", "dx": "Left ventricular hypertrophy with strain", "img": "img/e16.jpg", "w": 2242, "h": 1296, "orig": "img/o16.jpg", "rd": false, "back": "img/b16.png", "bw": 946, "bh": 627, "hala": null}, {"n": 17, "t": 1, "s": "PAST EXAM · 2025", "px": true, "q": "A 25-year-old patient complaining of bilateral lower-limb edema and abdominal distension. A- Comment on the ECG. B- What is the most likely diagnosis?", "cl": "Young + leg edema + ascites = right heart failure. RAD + R > S in V1 + P pulmonale = right heart strain.", "dx": "RVH + right atrial enlargement, from pulmonary hypertension → right-sided heart failure (e.g. mitral stenosis, cor pulmonale)", "img": "img/e17.jpg", "w": 2100, "h": 1122, "orig": "img/o17.jpg", "rd": false, "back": "img/b17.png", "bw": 945, "bh": 723, "hala": null}, {"n": 18, "t": 1, "s": "ECG FULL COMMENT, P. 80", "px": false, "q": "A 30-year-old woman admitted with diabetic ketoacidosis.", "cl": "Tall peaked (tented) T waves in ALL leads = hyperkalemia (renal failure, DKA).", "dx": "Hyperkalemia", "img": "img/e18.jpg", "w": 2036, "h": 956, "orig": "img/o18.jpg", "rd": false, "back": "img/b18.png", "bw": 946, "bh": 499, "hala": null}, {"n": 19, "t": 2, "s": "ECG FULL COMMENT, P. 55", "px": false, "q": "Comment on this ECG.", "cl": "Every P is followed by a QRS, but the PR is > 0.2 s (5 small squares).", "dx": "First-degree heart block", "img": "img/e19.jpg", "w": 1592, "h": 854, "orig": "img/o19.jpg", "rd": false, "back": "img/b19.png", "bw": 946, "bh": 500, "hala": null}, {"n": 20, "t": 2, "s": "ECG FULL COMMENT, P. 70", "px": false, "q": "Comment on this rhythm strip.", "cl": "PR gets longer, longer, longer… then a dropped beat.", "dx": "Second-degree heart block, Mobitz I (Wenckebach) 4:3", "img": "img/e20.jpg", "w": 1890, "h": 384, "orig": "img/o20.jpg", "rd": false, "back": "img/b20.png", "bw": 946, "bh": 590, "hala": null}, {"n": 21, "t": 2, "s": "ECG FULL COMMENT, P. 58", "px": false, "q": "Comment on this rhythm strip.", "cl": "Constant PR, but some P waves are not followed by a QRS.", "dx": "Second-degree heart block, Mobitz II with 3:1 conduction", "img": "img/e21.jpg", "w": 1770, "h": 422, "orig": "img/o21.jpg", "rd": false, "back": "img/b21.png", "bw": 945, "bh": 546, "hala": null}, {"n": 22, "t": 2, "s": "ECG FULL COMMENT, P. 71", "px": false, "q": "Comment on this rhythm strip.", "cl": "P waves and QRS complexes march independently. The escape rhythm is slow and wide.", "dx": "Complete (third-degree) heart block", "img": "img/e22.jpg", "w": 1804, "h": 382, "orig": "img/o22.jpg", "rd": false, "back": "img/b22.png", "bw": 946, "bh": 588, "hala": null}, {"n": 23, "t": 2, "s": "ECG FULL COMMENT, P. 75", "px": false, "q": "Central chest pain, worse lying flat and on deep inspiration.", "cl": "ST elevation in ALL leads, not one territory, and concave = pericarditis.", "dx": "Acute pericarditis", "img": "img/e23.jpg", "w": 1990, "h": 1054, "orig": "img/o23.jpg", "rd": false, "back": "img/b23.png", "bw": 946, "bh": 540, "hala": null}, {"n": 24, "t": 2, "s": "ECG FULL COMMENT, P. 42", "px": false, "q": "Comment on this ECG.", "cl": "ST depression in ALL leads, sagging like a reverse tick = digitalis.", "dx": "Atrial fibrillation with digitalis (digoxin) effect", "img": "img/e24.jpg", "w": 1982, "h": 1084, "orig": "img/o24.jpg", "rd": false, "back": "img/b24.png", "bw": 946, "bh": 588, "hala": null}, {"n": 25, "t": 2, "s": "ECG FULL COMMENT, P. 157", "px": false, "q": "Comment on this ECG.", "cl": "Fast + regular + narrow QRS + no visible P = SVT.", "dx": "Supraventricular (nodal) tachycardia (PSVT)", "img": "img/e25.jpg", "w": 1740, "h": 990, "orig": "img/o25.jpg", "rd": false, "back": "img/b25.png", "bw": 945, "bh": 508, "hala": null}, {"n": 26, "t": 2, "s": "ECG FULL COMMENT, P. 164", "px": false, "q": "Comment on this rhythm strip.", "cl": "No QRS at all, just chaotic waves = VF (cardiac arrest).", "dx": "Ventricular fibrillation (VF)", "img": "img/e26.jpg", "w": 1878, "h": 376, "orig": "img/o26.jpg", "rd": false, "back": "img/b26.png", "bw": 946, "bh": 502, "hala": null}, {"n": 27, "t": 2, "s": "ECG FULL COMMENT, P. 78", "px": false, "q": "Comment on this ECG.", "cl": "Short PR + delta wave (slurred start of the QRS) = WPW.", "dx": "Wolff-Parkinson-White (WPW) syndrome", "img": "img/e27.jpg", "w": 1528, "h": 910, "orig": "img/o27.jpg", "rd": false, "back": "img/b27.png", "bw": 946, "bh": 587, "hala": null}, {"n": 28, "t": 2, "s": "ECG FULL COMMENT, P. 143", "px": false, "q": "Knee replacement 2 days ago. Sudden breathlessness and right-sided pleuritic chest pain.", "cl": "Tachycardia + S1Q3T3 + anterior T inversion after surgery or immobility = PE.", "dx": "Acute pulmonary embolism (S1Q3T3)", "img": "img/e28.jpg", "w": 1990, "h": 992, "orig": "img/o28.jpg", "rd": false, "back": "img/b28.png", "bw": 946, "bh": 546, "hala": null}, {"n": 29, "t": 2, "s": "ECG FULL COMMENT, P. 146", "px": false, "q": "Comment on this ECG.", "cl": "A sharp vertical spike right before every wide QRS = ventricular pacing.", "dx": "Artificial ventricular pacemaker rhythm", "img": "img/e29.jpg", "w": 1830, "h": 768, "orig": "img/o29.jpg", "rd": false, "back": "img/b29.png", "bw": 945, "bh": 587, "hala": null}, {"n": 30, "t": 3, "s": "ECG FULL COMMENT, P. 97", "px": false, "q": "Comment on this rhythm strip.", "cl": "Everything is normal except the rate: > 100 b/min.", "dx": "Sinus tachycardia", "img": "img/e30.jpg", "w": 1802, "h": 376, "orig": "img/o30.jpg", "rd": false, "back": "img/b30.png", "bw": 946, "bh": 461, "hala": null}, {"n": 31, "t": 3, "s": "ECG FULL COMMENT, P. 91", "px": false, "q": "Comment on this rhythm strip.", "cl": "Everything is normal except the rate: < 60 b/min.", "dx": "Sinus bradycardia", "img": "img/e31.jpg", "w": 1808, "h": 384, "orig": "img/o31.jpg", "rd": false, "back": "img/b31.png", "bw": 946, "bh": 461, "hala": null}, {"n": 32, "t": 3, "s": "ECG FULL COMMENT, P. 122", "px": false, "q": "Comment on this rhythm strip.", "cl": "Slow + regular + narrow QRS, with the P wave absent or inverted = the AV node is pacing the heart.", "dx": "Nodal (junctional) rhythm", "img": "img/e32.jpg", "w": 1750, "h": 370, "orig": "img/o32.jpg", "rd": false, "back": "img/b32.png", "bw": 946, "bh": 499, "hala": null}, {"n": 33, "t": 3, "s": "ECG FULL COMMENT, P. 118", "px": false, "q": "Comment on this rhythm strip.", "cl": "Very slow (20–40 b/min) + wide QRS + no P waves = the ventricles are pacing themselves.", "dx": "Idioventricular rhythm", "img": "img/e33.jpg", "w": 1790, "h": 406, "orig": "img/o33.jpg", "rd": false, "back": "img/b33.png", "bw": 945, "bh": 499, "hala": null}, {"n": 34, "t": 3, "s": "ECG FULL COMMENT, P. 142", "px": false, "q": "Comment on this rhythm strip.", "cl": "Wide QRS complexes that grow and shrink, as if twisting around the baseline = torsades (a type of VT).", "dx": "Torsades de pointes", "img": "img/e34.jpg", "w": 1892, "h": 378, "orig": "img/o34.jpg", "rd": false, "back": "img/b34.png", "bw": 946, "bh": 540, "hala": null}, {"n": 35, "t": 3, "s": "ECG FULL COMMENT, P. 135", "px": false, "q": "Comment on this rhythm strip.", "cl": "A sudden pause with no P wave and no QRS, then normal beats again = the SA node stopped firing for a moment.", "dx": "Sinus arrest (sinus pause)", "img": "img/e35.jpg", "w": 1666, "h": 378, "orig": "img/o35.jpg", "rd": false, "back": "img/b35.png", "bw": 946, "bh": 538, "hala": null}, {"n": 36, "t": 3, "s": "ECG FULL COMMENT, P. 153", "px": false, "q": "Comment on this rhythm strip.", "cl": "Two normal beats, then one ectopic: every 3rd beat is a ventricular extrasystole.", "dx": "Sinus rhythm with ventricular trigeminy", "img": "img/e36.jpg", "w": 1728, "h": 372, "orig": "img/o36.jpg", "rd": false, "back": "img/b36.png", "bw": 946, "bh": 670, "hala": null}, {"n": 37, "t": 3, "s": "ECG FULL COMMENT, P. 81", "px": false, "q": "Feeling generally weak and lethargic, with frequent palpitations.", "cl": "Small T waves + prominent U waves (an extra hump after the T) = low potassium. Weakness and palpitations fit.", "dx": "Hypokalemia", "img": "img/e37.jpg", "w": 1924, "h": 1010, "orig": "img/o37.jpg", "rd": false, "back": "img/b37.png", "bw": 945, "bh": 500, "hala": null}, {"n": 38, "t": 3, "s": "ECG FULL COMMENT, P. 72", "px": false, "q": "Comment on this ECG.", "cl": "Left axis deviation (lead I up, aVF down) with deep S in II, III, aVF and a normal-width QRS = left anterior hemiblock.", "dx": "Left anterior hemiblock + left atrial dilatation (P mitrale)", "img": "img/e38.jpg", "w": 1848, "h": 844, "orig": "img/o38.jpg", "rd": false, "back": "img/b38.png", "bw": 946, "bh": 546, "hala": null}, {"n": 39, "t": 3, "s": "ECG FULL COMMENT, P. 18", "px": false, "q": "Comment on this ECG.", "cl": "Right axis deviation (lead I down, aVF up) with deep S in I, aVL and a normal-width QRS = left posterior hemiblock. Tall R in V5 = LV enlargement; T inversion in II, III, aVF = inferior ischemia.", "dx": "Left posterior hemiblock + LV enlargement + inferior ischemia", "img": "img/e39.jpg", "w": 1832, "h": 900, "orig": "img/o39.jpg", "rd": false, "back": "img/b39.png", "bw": 946, "bh": 665, "hala": null}];
+const TIERS = [[1, "Tier 1 · Must know"], [2, "Tier 2 · Likely"], [3, "Tier 3 · Recognize only"]];
+const BYN = {}; CARDS.forEach(c => { BYN[c.n] = c; });
+const LS = "ecg-fc-v1";
+const $ = s => document.querySelector(s);
+const now = () => Date.now();
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+const blank = () => ({ v: 1, res: {}, perm: null, chaps: [], cat: "all", pos: {}, updatedAt: 0 });
+let st = blank();
+try { st = Object.assign(blank(), JSON.parse(localStorage.getItem(LS) || "{}")); } catch (e) {}
+
+function merge(a, b) {
+  const o = blank(); o.res = Object.assign({}, a.res);
+  Object.entries(b.res || {}).forEach(([k, v]) => { if (!o.res[k] || (v.t || 0) > (o.res[k].t || 0)) o.res[k] = v; });
+  const nw = (b.updatedAt || 0) > (a.updatedAt || 0) ? b : a;
+  o.perm = nw.perm; o.chaps = nw.chaps || []; o.cat = nw.cat || "all"; o.pos = Object.assign({}, a.pos, b.pos, nw.pos);
+  o.updatedAt = Math.max(a.updatedAt || 0, b.updatedAt || 0); return o;
+}
+let pushT = null;
+function save(noSync) { st.updatedAt = now(); try { localStorage.setItem(LS, JSON.stringify(st)); } catch (e) {} if (!noSync) { clearTimeout(pushT); pushT = setTimeout(ghPush, 2500); } }
+
+/* ---------- deck ---------- */
+let list = [], i = 0, flipped = false, key = "", showHint = false, showOrig = false;
+function keyOf() { return (st.chaps.length ? st.chaps.join("+") : "all") + "|" + st.cat + "|" + (st.perm ? "s" : "b"); }
+function inTiers() { const ch = new Set(st.chaps); return CARDS.filter(c => !ch.size || ch.has(c.t)); }
+function build(keepPos) {
+  let L = inTiers();
+  const r = n => (st.res[n] || {}).r;
+  if (st.cat === "new") L = L.filter(c => !r(c.n));
+  if (st.cat === "failed") L = L.filter(c => r(c.n) === "f");
+  if (st.cat === "passed") L = L.filter(c => r(c.n) === "p");
+  if (st.cat === "past") L = L.filter(c => c.px);
+  if (st.perm) { const ord = {}; st.perm.forEach((n, k) => { ord[n] = k; }); L.sort((a, b) => (ord[a.n] ?? 1e9) - (ord[b.n] ?? 1e9)); }
+  list = L.map(c => c.n); key = keyOf();
+  i = keepPos ? Math.min(st.pos[key] || 0, Math.max(0, list.length - 1)) : 0;
+  flipped = false; showHint = false; showOrig = false; paint();
+}
+function chipRow(el, items, isOn, onTap) {
+  el.innerHTML = "";
+  items.forEach(([v, t]) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = t; b.setAttribute("aria-pressed", String(isOn(v))); b.onclick = () => onTap(v); el.appendChild(b); });
+}
+let paintChips = function () {
+  const cnt = t => CARDS.filter(c => c.t === t).length;
+  chipRow($("#chapChips"), [["*", "All tiers (" + CARDS.length + ")"], ...TIERS.map(([t, s]) => [t, s + " (" + cnt(t) + ")"])],
+    v => v === "*" ? !st.chaps.length : st.chaps.includes(v),
+    v => { if (v === "*") st.chaps = []; else st.chaps = st.chaps.includes(v) ? st.chaps.filter(x => x !== v) : TIERS.map(x => x[0]).filter(x => x === v || st.chaps.includes(x)); save(); paintChips(); build(true); });
+  const res = Object.values(st.res);
+  chipRow($("#catChips"), [["all", "All cards"], ["new", "Not done yet"], ["failed", "Failed (" + res.filter(x => x.r === "f").length + ")"], ["passed", "Passed (" + res.filter(x => x.r === "p").length + ")"], ["past", "Past exams (" + CARDS.filter(c => c.px).length + ")"]],
+    v => st.cat === v, v => { st.cat = v; save(); paintChips(); build(true); });
+};
+function paintStats() {
+  const inSel = inTiers();
+  const p = inSel.filter(c => (st.res[c.n] || {}).r === "p").length, f = inSel.filter(c => (st.res[c.n] || {}).r === "f").length;
+  $("#stats").innerHTML = `<span>Card <b>${list.length ? Math.min(i + 1, list.length) : 0}</b> / ${list.length}</span><span class="p">Passed <b>${p}</b></span><span class="f">Failed <b>${f}</b></span><span>Not done <b>${inSel.length - p - f}</b></span>` + (st.perm ? "<span>🔀 shuffled</span>" : "");
+  $("#barFill").style.width = (inSel.length ? Math.round((p + f) / inSel.length * 100) : 0) + "%";
+}
+function paint() {
+  paintStats();
+  const m = $("#main");
+  if (!list.length) { m.innerHTML = `<div class="panel empty">${st.cat === "failed" ? "No failed cards here 🎉" : st.cat === "new" ? "Every card in these tiers is done ✓" : "No cards here."}</div>`; return; }
+  if (i >= list.length) {
+    m.innerHTML = `<div class="panel empty"><div style="font-size:20px;font-weight:800;color:var(--navy)">End of this set ✓</div><p>${list.length} cards.</p><div class="row" style="justify-content:center"><button class="btn" id="again">Start again</button><button class="btn primary" id="toFailed">Redo failed cards</button></div></div>`;
+    $("#again").onclick = () => { i = 0; flipped = false; savePos(); paint(); };
+    $("#toFailed").onclick = () => { st.cat = "failed"; save(); paintChips(); build(false); };
+    return;
+  }
+  const c = BYN[list[i]], r = st.res[c.n];
+  const src = showOrig ? c.orig : c.img;
+  m.innerHTML = `<div class="fc" id="card">
+    <div class="top"><span><span class="tag t${c.t}">#${c.n} · Tier ${c.t}</span> <span class="src${c.px ? " past" : ""}">${esc(c.s)}</span></span>${r ? `<span class="state ${r.r}">${r.r === "p" ? "✓ passed before" : "✗ failed before"}</span>` : "<span>new</span>"}</div>
+    <div class="stem">${esc(c.q)}</div>
+    <div class="pic"><img src="${src}" alt="ECG"></div>
+    <div class="tools">
+      ${c.cl ? `<button class="btn${showHint ? " on" : ""}" id="hintB" type="button">💡 ${showHint ? "Hide hint" : "Show hint"}</button>` : ""}
+      ${c.rd ? `<button class="btn${showOrig ? " on" : ""}" id="origB" type="button">🖼 ${showOrig ? "Show cleaned-up ECG" : "View original photo"}</button>` : ""}
+      <button class="btn" id="zoomB" type="button">🔍 Enlarge</button>
+    </div>
+    ${c.rd && !showOrig ? `<div class="hint" style="margin-top:6px">Redrawn from the photo: the same trace and grid, cleaned up.</div>` : ""}
+    ${showHint && c.cl ? `<div class="clue"><b>Clue:</b> ${esc(c.cl)}</div>` : ""}
+    ${flipped ? `<div class="ans"><div class="lab">Full comment · practice pack</div><img id="ansImg" src="${c.back}" width="${c.bw}" height="${c.bh}" alt="Answer" title="Tap to enlarge">${c.hala ? `<div class="lab" style="margin-top:14px">Dr. Hala's comment · as written</div><div class="hala">${c.hala.map(l => /^Diagnosis/.test(l) ? `<div class="dx">${esc(l)}</div>` : `<div>${esc(l)}</div>`).join("")}</div>` : ""}</div>` : `<div class="hint">Tap the card to see the full comment</div>`}
+  </div>
+  ${flipped ? `<div class="acts"><button class="btn fail" id="failB" type="button">✗ Fail</button><button class="btn pass" id="passB" type="button">✓ Pass</button></div>` : ""}
+  <div class="nav"><button class="btn" id="prevB" type="button" ${i ? "" : "disabled"}>← Previous</button><button class="btn" id="nextB" type="button">Skip →</button></div>`;
+  $("#card").onclick = e => { if (e.target.closest("button")) return; if (!flipped) { flipped = true; paint(); } };
+  if ($("#hintB")) $("#hintB").onclick = () => { showHint = !showHint; paint(); };
+  if ($("#origB")) $("#origB").onclick = () => { showOrig = !showOrig; paint(); };
+  $("#card .pic img").ondblclick = e => { e.stopPropagation(); openZoom(src); };
+  $("#zoomB").onclick = () => openZoom(src);
+  $("#prevB").onclick = () => { if (i) { i--; flipped = false; showHint = false; showOrig = false; savePos(); paint(); } };
+  $("#nextB").onclick = () => { i++; flipped = false; showHint = false; showOrig = false; savePos(); paint(); };
+  if ($("#ansImg")) $("#ansImg").onclick = e => { e.stopPropagation(); openZoom(c.back, 130); };
+  if (flipped) { $("#passB").onclick = () => mark("p"); $("#failB").onclick = () => mark("f"); }
+  if (list[i + 1]) { const im = new Image(); im.src = BYN[list[i + 1]].img; }
+}
+let zw = 200;
+function openZoom(s, w0) { zw = w0 || 200; $("#zoomImg").style.width = zw + "vw"; $("#zoomImg").src = s; $("#zoom").hidden = false; $("#zoom").scrollTo(0, 0); }
+$("#zoomX").onclick = () => { $("#zoom").hidden = true; };
+$("#zIn").onclick = () => { zw = Math.min(600, zw + 60); $("#zoomImg").style.width = zw + "vw"; };
+$("#zOut").onclick = () => { zw = Math.max(100, zw - 60); $("#zoomImg").style.width = zw + "vw"; };
+function savePos() { st.pos[key] = i; save(); }
+function mark(r) {
+  const n = list[i], old = st.res[n];
+  st.res[n] = { r, t: now(), c: ((old && old.c) || 0) + 1 };
+  if (r === "f" && st.cat !== "passed") { const at = Math.min(list.length, i + 6); list.splice(at, 0, n); } // a failed card comes back a few cards later
+  i++; flipped = false; showHint = false; showOrig = false; st.pos[key] = i; save(); paintChips(); paint();
+}
+$("#shufB").onclick = () => {
+  const a = CARDS.map(c => c.n), rnd = new Uint32Array(a.length); crypto.getRandomValues(rnd);
+  for (let k = a.length - 1; k > 0; k--) { const j = rnd[k] % (k + 1); [a[k], a[j]] = [a[j], a[k]]; }
+  st.perm = a; save(); optLabel(); build(false);
+};
+$("#unshufB").onclick = () => { st.perm = null; save(); optLabel(); build(true); };
+$("#resetB").onclick = () => {
+  if (!confirm("Clear all Pass/Fail results for the ECG cards on this device (and on synced devices)?")) return;
+  st.res = {}; st.pos = {}; st.resetAt = now(); save(); paintChips(); build(false);
+};
+document.addEventListener("keydown", e => {
+  if (!$("#zoom").hidden) { if (e.key === "Escape") $("#zoom").hidden = true; return; }
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (!flipped && list[i]) { flipped = true; paint(); } }
+  else if (e.key === "h") { showHint = !showHint; paint(); }
+  else if (flipped && (e.key === "1" || e.key === "f")) mark("f");
+  else if (flipped && (e.key === "2" || e.key === "p")) mark("p");
+  else if (e.key === "ArrowRight") { if (i < list.length) { i++; flipped = false; showHint = false; savePos(); paint(); } }
+  else if (e.key === "ArrowLeft") { if (i) { i--; flipped = false; showHint = false; savePos(); paint(); } }
+});
+
+/* ---------- GitHub sync (same key as the quizzes) ---------- */
+const GH = { tokKey: "imq-gh-token", gistKey: "ecg-gh-gist", file: "ecg-progress.json", api: "https://api.github.com" };
+const ghGet = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const ghPut = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
+let ghTok = ghGet(GH.tokKey), ghGist = ghGet(GH.gistKey), ghBusy = false, ghAgain = false;
+async function ghFetch(path, opt) {
+  const r = await fetch(GH.api + path, Object.assign({ cache: "no-store" }, opt || {}, { headers: Object.assign({ "Authorization": "Bearer " + ghTok, "Accept": "application/vnd.github+json" }, (opt && opt.body) ? { "Content-Type": "application/json" } : {}) }));
+  if (!r.ok) { const e = new Error("github " + r.status); e.status = r.status; throw e; }
+  return r.json();
+}
+async function ghFind() {
+  if (ghGist) { try { await ghFetch("/gists/" + ghGist); return ghGist; } catch (e) { if (e.status === 401) throw e; } }
+  for (let page = 1; page <= 10; page++) {
+    const L = await ghFetch("/gists?per_page=100&page=" + page);
+    const hit = L.find(g => g.files && g.files[GH.file]); if (hit) { ghGist = hit.id; ghPut(GH.gistKey, ghGist); return ghGist; }
+    if (L.length < 100) break;
+  }
+  const made = await ghFetch("/gists", { method: "POST", body: JSON.stringify({ public: false, description: "ECG flashcards progress (synced between devices)", files: { [GH.file]: { content: JSON.stringify(st) } } }) });
+  ghGist = made.id; ghPut(GH.gistKey, ghGist); return ghGist;
+}
+async function ghRead() {
+  const g = await ghFetch("/gists/" + ghGist); const f = g.files && g.files[GH.file]; if (!f) return null;
+  let t = f.content; if (f.truncated) t = await (await fetch(f.raw_url, { cache: "no-store" })).text();
+  try { return JSON.parse(t); } catch (e) { return null; }
+}
+function applyTheirs(t) {
+  if (!t) return false;
+  if ((t.resetAt || 0) > (st.resetAt || 0)) { st.res = {}; st.pos = {}; st.resetAt = t.resetAt; }
+  else if ((st.resetAt || 0) > (t.resetAt || 0)) { t = Object.assign({}, t, { res: {}, pos: {} }); }
+  const before = JSON.stringify(st);
+  const m = merge(st, t); m.resetAt = Math.max(st.resetAt || 0, t.resetAt || 0); st = m;
+  if (JSON.stringify(st) !== before) { try { localStorage.setItem(LS, JSON.stringify(st)); } catch (e) {} paintChips(); build(true); return true; }
+  return false;
+}
+async function ghSync() {
+  if (!ghTok) return;
+  if (ghBusy) { ghAgain = true; return; }
+  ghBusy = true;
+  try {
+    await ghFind(); const t = await ghRead(); applyTheirs(t);
+    if (!t || JSON.stringify(t) !== JSON.stringify(st)) await ghFetch("/gists/" + ghGist, { method: "PATCH", body: JSON.stringify({ files: { [GH.file]: { content: JSON.stringify(st) } } }) });
+    $("#ghLast").textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); ghShow(true);
+  } catch (e) {
+    if (e.status === 401) { ghTok = ""; ghShow(false); ghMsg("Your GitHub key stopped working — paste a new one", "bad"); $("#ghBox").open = true; }
+    else if (e.status === 404) { ghGist = ""; ghPut(GH.gistKey, ""); }
+  } finally { ghBusy = false; if (ghAgain) { ghAgain = false; setTimeout(ghSync, 1200); } }
+}
+function ghPush() { if (ghTok) ghSync(); }
+const ghMsg = (t, c, el) => { const m = $(el || "#ghMsg"); m.textContent = t; m.className = "ghmsg" + (c ? " " + c : ""); };
+function ghShow(on) { $("#ghOff").hidden = on; $("#ghOn").hidden = !on; const s = $("#ghState"); s.textContent = on ? "● on" : "○ off"; s.className = "ghstate" + (on ? " on" : ""); }
+$("#ghConnect").onclick = async () => {
+  const t = $("#ghToken").value.trim(); if (!t) { ghMsg("Paste your GitHub key first", "bad"); return; }
+  ghTok = t; ghMsg("Connecting…");
+  try { await ghFetch("/user"); ghPut(GH.tokKey, t); $("#ghToken").value = ""; ghMsg(""); await ghSync(); ghMsg("Connected ✓ progress merged", "ok", "#ghMsg2"); }
+  catch (e) { ghTok = ""; ghMsg(e.status === 401 ? "That key isn't valid (check you copied all of it)" : "Couldn't reach GitHub — try again", "bad"); }
+};
+$("#ghNow").onclick = async () => { ghMsg("Syncing…", "", "#ghMsg2"); await ghSync(); ghMsg("Synced ✓", "ok", "#ghMsg2"); };
+$("#ghOut").onclick = () => { ghPut(GH.tokKey, ""); ghPut(GH.gistKey, ""); ghTok = ""; ghGist = ""; ghShow(false); ghMsg("Disconnected. Your progress stays on this device."); };
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") ghSync(); else if (ghTok) ghSync(); });
+setInterval(() => { if (ghTok && document.visibilityState === "visible") ghSync(); }, 20000);
+
+
+if (window.innerWidth > 700) $("#optBox").open = true;
+function optLabel() { const n = st.chaps.length; $("#optSum").textContent = "⚙︎ Tiers & options · " + (n ? st.chaps.map(t => "Tier " + t).join(" + ") : "all tiers") + " · " + ({ all: "all cards", new: "not done yet", failed: "failed", passed: "passed", past: "past exams" })[st.cat] + (st.perm ? " · shuffled" : ""); }
+const _pc = paintChips; paintChips = function () { _pc(); optLabel(); };
+paintChips(); build(true); ghShow(!!ghTok); if (ghTok) ghSync();
+</script>
+</body>
+</html>
