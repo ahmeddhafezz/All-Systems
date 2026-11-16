@@ -28,6 +28,10 @@ Open `index.html` (or the GitHub Pages link). Tap a card to flip it, then mark P
 
 `ECG/` holds the ECG flashcards: the 39 ECGs of the ECG Practice Pack in its three tiers (Tier 1 must know #1–18, Tier 2 likely #19–29, Tier 3 recognize only #30–39). The front is the case and the ECG; "Show hint" reveals the pack's clue. Tap the card for the full comment from the pack, and for the six Dr. Hala past-exam ECGs also her own comment as written. Every ECG is the practice pack's own image, untouched (no sharpening or clean-up). #14 is shown as a true redraw (trace re-traced on a true-scale grid, lead names typed) with "View original" to see the photo. "Enlarge" opens the ECG full size to pinch and scroll. Pass/Fail, Failed list, Past-exams filter, Shuffle/Unshuffle and device sync work like the Derma atlas (private gist file `ecg-progress.json`, same GitHub key). Open `ECG/index.html` (or the GitHub Pages link + `/ECG/`).
 
+### ECG redrawn set
+
+`ECG/redrawn/` holds the ECG Redrawn Set: all 39 practice-pack ECGs redrawn as clean true-scale tracings (25 mm/s, 10 mm/mV, lead names typed), built from each case's answer. The front is the case and the ECG with the clue behind "Show hint"; "Show answer" gives Dr. Hala's 8-line comment and the diagnosis. Pass/Fail, a Failed list, Not done and tier filters, Shuffle/Unshuffle, and device sync with the same GitHub key (private gist file `ecg-redrawn-progress.json`). Open it from the "ECG Redrawn Set →" link in the ECG deck, or the GitHub Pages link + `/ECG/redrawn/`.
+
 ## Notes
 
 `Notes/` is a PDF writing page for iPad with a stylus: open any PDF from Files and write on it with Pen, Marker, Pencil, straight line and Eraser, with Undo/Redo, colours and thickness. Pinch and double-tap zoom are switched off so drawing circles or S shapes doesn't zoom the page; use the − / ＋ buttons to zoom and ✋ to scroll. Notes are saved automatically in this browser, and "⤓ PDF" downloads a copy of the PDF with your writing on it. Open `Notes/index.html` (or the GitHub Pages link + `/Notes/`).
