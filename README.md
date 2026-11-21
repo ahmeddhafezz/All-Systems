@@ -31,3 +31,7 @@ Open `index.html` (or the GitHub Pages link). Tap a card to flip it, then mark P
 ## Notes
 
 `Notes/` is a PDF writing page for iPad with a stylus: open any PDF from Files and write on it with Pen, Marker, Pencil, straight line and Eraser, with Undo/Redo, colours and thickness. Pinch and double-tap zoom are switched off so drawing circles or S shapes doesn't zoom the page; use the − / ＋ buttons to zoom and ✋ to scroll. Notes are saved automatically in this browser, and "⤓ PDF" downloads a copy of the PDF with your writing on it. Open `Notes/index.html` (or the GitHub Pages link + `/Notes/`).
+
+## Surgery
+
+`Surgery/` holds the Surgery flashcards: the plastic surgery questions of the 2026 surgery essay bank (Class A, B and C). The front is the question; the back is the matching section of the surgery book. The answers are stored encrypted and open with a password, which each device remembers after the first time. Class and topic filters, Pass/Fail, Failed list, Shuffle/Unshuffle and the drawing tools work like the IM deck. Progress syncs between devices with the same GitHub key (private gist file `surgery-progress.json`). Open `Surgery/index.html` (or the GitHub Pages link + `/Surgery/`).

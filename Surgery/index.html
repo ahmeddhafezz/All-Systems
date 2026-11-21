@@ -1,0 +1,802 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<div id="lock"><form id="lockForm" autocomplete="off">
+  <h2>Surgery Flashcards</h2>
+  <p>Enter the password to open the answers. This device will remember it.</p>
+  <input id="lockPw" type="password" placeholder="Password" autocomplete="current-password">
+  <button type="submit">Open</button>
+  <div id="lockMsg"></div>
+</form></div>
+
+<title>Surgery Flashcards</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Atkinson+Hyperlegible:wght@400;700&family=Roboto:ital,wght@0,400;0,700;1,400&family=Caveat:wght@500;600&display=swap">
+<style>
+/* Layout: the same one-card study system as the six single-system decks; system chips + grouped topic picker above, prev / flip / next dock below. Each system keeps its own colour on its tag. */
+:root{
+  --bg:#eff0f2; --surface:#ffffff; --ink:#1c2230; --muted:#5f6677; --line:#d5d8df;
+  --accent:#1d4e63; --accent-ink:#ffffff; --tag:#24304a; --tag-bg:#e2e6ee;
+  --mn-bg:#fff6cc; --mn-ink:#3b2f00; --mn-line:#e7cf5c; --plate:#ffffff;
+  --pass:#1f7a45; --pass-ink:#ffffff; --fail:#b3362c; --fail-ink:#ffffff; --fail-soft:#f8e1de; --track:#dadde4;
+  --s-chest:#9c2a24; --s-cardio:#9c2a5a; --s-hep:#8a5a00; --s-git:#0f6b62; --s-neuro:#3b45a3; --s-nephro:#6e6c0e; --s-hema:#a8321f; --s-inf:#1f6f63; --s-rheum:#5b4a9a; --s-endo:#7a5a10; --s-plastic:#a3401f; --s-ink:#ffffff;
+  --display:"Fraunces", Georgia, serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12151c; --surface:#1b2029; --ink:#e6e9ef; --muted:#9aa2b2; --line:#2e3542;
+  --accent:#7cc4dc; --accent-ink:#0a1c24; --tag:#cfd7e6; --tag-bg:#252c3a;
+  --mn-bg:#3a3214; --mn-ink:#fbeeb8; --mn-line:#776420; --plate:#f4f4f2;
+  --pass:#5fd18f; --pass-ink:#0b2414; --fail:#ff8a7d; --fail-ink:#2a0c08; --fail-soft:#3a1d1a; --track:#2e3542;
+  --s-chest:#e07a6f; --s-cardio:#ec7fa8; --s-hep:#e0b25c; --s-git:#5fcfbf; --s-neuro:#9aa3f0; --s-nephro:#cfcb5e; --s-hema:#f0907f; --s-inf:#6fd0bf; --s-rheum:#b3a6f0; --s-endo:#e0bb62; --s-plastic:#f0956f; --s-ink:#14161c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12151c; --surface:#1b2029; --ink:#e6e9ef; --muted:#9aa2b2; --line:#2e3542;
+  --accent:#7cc4dc; --accent-ink:#0a1c24; --tag:#cfd7e6; --tag-bg:#252c3a;
+  --mn-bg:#3a3214; --mn-ink:#fbeeb8; --mn-line:#776420; --plate:#f4f4f2;
+  --pass:#5fd18f; --pass-ink:#0b2414; --fail:#ff8a7d; --fail-ink:#2a0c08; --fail-soft:#3a1d1a; --track:#2e3542;
+  --s-chest:#e07a6f; --s-cardio:#ec7fa8; --s-hep:#e0b25c; --s-git:#5fcfbf; --s-neuro:#9aa3f0; --s-nephro:#cfcb5e; --s-hema:#f0907f; --s-inf:#6fd0bf; --s-rheum:#b3a6f0; --s-endo:#e0bb62; --s-plastic:#f0956f; --s-ink:#14161c; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:0 120px}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:22px 6px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--display);font-size:clamp(26px,5.5vw,36px);line-height:1.1;margin:4px 0 6px;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:62ch;font-size:15px}
+.label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip small{font-size:12px;opacity:.7;font-variant-numeric:tabular-nums}
+.chip .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.chip.sys[aria-pressed="true"]{background:var(--sc);border-color:var(--sc);color:var(--s-ink)}
+.chip:focus-visible,.btn:focus-visible,.card:focus-visible,.link:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.chip:disabled{opacity:.45;cursor:default}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;min-height:340px;cursor:pointer;overflow:hidden}
+.front{padding:28px 24px 30px;display:flex;flex-direction:column;justify-content:center;min-height:340px;gap:14px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:5px;background:var(--tag-bg);color:var(--tag)}
+.tag.sys{background:var(--sc);color:var(--s-ink)}
+.tag.cat{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.tag.extra{background:var(--surface);color:var(--muted);border:1px dashed var(--line)}
+.tag.revise{background:var(--fail-soft);color:var(--fail)}
+.q{font-family:var(--display);font-weight:600;font-size:clamp(24px,5vw,34px);line-height:1.2;margin:0;text-wrap:balance}
+.pen{font-family:var(--body);font-size:.8em;margin-left:6px}
+.hint{color:var(--muted);font-size:14px;margin:0}
+.back{padding:18px 16px 20px;display:grid;gap:12px}
+#lock{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+#lock form{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;max-width:360px;width:100%;display:grid;gap:12px}
+#lock h2{font-family:var(--display);margin:0;font-size:24px}
+#lock p{margin:0;color:var(--muted);font-size:14px}
+#lock input{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--bg);color:var(--ink)}
+#lock button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:11px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+#lockMsg{color:var(--fail);font-size:14px;min-height:1em}
+.gh{margin:22px 0 0;border-top:1px solid var(--line);padding-top:12px;font-size:14px;color:var(--muted)}
+.gh summary{cursor:pointer;font-weight:700;color:var(--ink)}
+.gh p{margin:8px 0}
+.gh input{width:100%;font:14px ui-monospace,monospace;border:1px solid var(--line);border-radius:9px;padding:9px;background:var(--bg);color:var(--ink);margin-bottom:8px}
+.gh button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer;margin-right:6px}
+.ghstate.on{color:var(--pass)} .ghmsg.ok{color:var(--pass)} .ghmsg.bad{color:var(--fail)}
+.back-q{font-weight:700;font-size:15px;color:var(--muted);margin:0 4px}
+.mn{background:var(--mn-bg);color:var(--mn-ink);border:1px solid var(--mn-line);border-radius:10px;padding:12px 14px}
+.mn-label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+.mn-title{font-family:var(--display);font-weight:700;font-size:clamp(19px,4.2vw,24px);line-height:1.25;margin:2px 0 8px;overflow-wrap:anywhere}
+.mn-note{font-size:13px;opacity:.85;margin:-4px 0 8px}
+.mn dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:0;font-size:14px}
+.mn dt{font-weight:700;white-space:nowrap}
+.mn dd{margin:0;min-width:0}
+.scan{background:var(--plate);border-radius:8px;padding:4px}
+.scan img{display:block;width:100%;height:auto;border-radius:4px;min-height:60px}
+/* Ink: highlighter + pen drawn over the answer pictures, saved per card on this device */
+.ink-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--surface);padding:6px 0;border-bottom:1px solid var(--line)}
+.ink-bar button{min-width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;cursor:pointer}
+.ink-bar button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:-1px}
+.ink-bar .tog{font-weight:700}
+.ink-bar .tog[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);outline:none}
+.ink-bar .sw{width:22px;height:22px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
+.ink-bar .hl .sw{border-radius:4px;width:24px;height:14px}
+.ink-bar .sep{width:1px;height:28px;background:var(--line);margin:0 2px}
+.ink-bar .hint{font-size:12.5px;color:var(--muted);flex-basis:100%;margin:0 2px}
+.ink-bar .danger{color:var(--fail)}
+.scan{position:relative}
+.scan canvas{position:absolute;left:4px;top:4px;pointer-events:none}
+.scan canvas.ink-h{mix-blend-mode:multiply}
+.inking .scan canvas.ink-p{pointer-events:auto;touch-action:none;cursor:crosshair}
+.inking .scan{box-shadow:0 0 0 2px var(--accent)}
+.inking .scan,.inking .scan *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
+.src{font-size:13px;color:var(--muted);margin:0 4px}
+.pp{font-size:12.5px;color:var(--muted);margin:4px 4px 0;line-height:1.45} .pp b{color:var(--accent)}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);
+  padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.dock-in{max-width:860px;margin:0 auto;display:flex;gap:8px}
+/* Floating drawing tools, pinned to the top-left of the screen */
+.inkfab{position:fixed;left:0;top:0;z-index:30;display:flex;flex-direction:column;align-items:center;gap:6px;
+  margin-left:max(10px, env(safe-area-inset-left, 0px));margin-top:max(10px, env(safe-area-inset-top, 0px));transform-origin:0 0}
+.inkfab .tog{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:24px;
+  box-shadow:0 3px 12px rgba(0,0,0,.22);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.inkfab .tog[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.fab-col{display:flex;flex-direction:column;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:6px;box-shadow:0 3px 12px rgba(0,0,0,.18)}
+.fab-col button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.fab-col button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:-1px}
+.fab-col .sw{width:22px;height:22px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
+.fab-col .hl .sw{border-radius:4px;width:24px;height:14px}
+.fab-col .sep{display:block;height:1px;background:var(--line);margin:0 6px}
+.fab-col .danger{color:var(--fail)} .fab-col .armed{background:var(--fail);color:var(--fail-ink);font-size:12px;font-weight:700}
+.dock{transform-origin:0 100%;z-index:25}
+/* Tools moved to the top: one row across the top of the screen (wraps to a second row on narrow phones) */
+.inkfab.top{right:0;flex-direction:row;align-items:flex-start;margin-right:max(10px, env(safe-area-inset-right, 0px))}
+.inkfab.top .fab-col{flex-direction:row;flex-wrap:wrap;align-items:center;flex:0 1 auto;min-width:0}
+.inkfab.top .fab-col .sep{width:1px;height:28px;margin:0 2px}
+.fab-col .pos{font-size:17px}
+
+.btn{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:12px 14px;border-radius:10px;cursor:pointer;flex:1}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);flex:2}
+.btn[disabled]{opacity:.4;cursor:default}
+.btn.nav{flex:0 0 auto;min-width:52px;padding-inline:12px}
+.btn.pass{background:var(--pass);color:var(--pass-ink);border-color:var(--pass);flex:2}
+.btn.fail{background:var(--fail);color:var(--fail-ink);border-color:var(--fail);flex:2}
+@media (max-width:420px){.btn.nav .nl{display:none}}
+.progress{margin:18px 0 8px;display:grid;gap:8px}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;font-variant-numeric:tabular-nums;align-items:baseline}
+.stats b{font-family:var(--display);font-size:20px}
+.stat-pass b{color:var(--pass)} .stat-fail b{color:var(--fail)}
+.bar{height:8px;border-radius:99px;background:var(--track);overflow:hidden;display:flex}
+.bar i{display:block;height:100%} .bar .p{background:var(--pass)} .bar .f{background:var(--fail)}
+.saved{font-size:12px;color:var(--muted)}
+.finish{padding:32px 24px;display:grid;gap:12px;min-height:340px;align-content:center}
+.finish h2{font-family:var(--display);font-size:clamp(26px,5vw,34px);margin:0}
+.finish p{margin:0;color:var(--muted)}
+.tpanel{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:14px}
+.trow{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.tgroup{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.tgroup:first-of-type{border-top:0;padding-top:0}
+.thead{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.thead h3{margin:0;font-family:var(--display);font-size:18px;display:flex;align-items:center;gap:8px;margin-right:auto}
+.thead h3 .dot{width:10px;height:10px;border-radius:50%;background:var(--sc)}
+.thead small{font-family:var(--body);font-size:13px;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
+.tlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 14px}
+.tlist label{display:flex;gap:8px;align-items:center;font-size:15px;cursor:pointer;min-width:0}
+.tlist input{width:18px;height:18px;flex:none;accent-color:var(--sc)}
+.tlist small{color:var(--muted);font-variant-numeric:tabular-nums}
+.links{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:14px;align-items:center}
+.link{font:inherit;font-size:14px;background:none;border:none;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer}
+.s-plastic{--sc:var(--s-plastic)} .s-chest{--sc:var(--s-chest)} .s-cardio{--sc:var(--s-cardio)} .s-hep{--sc:var(--s-hep)} .s-git{--sc:var(--s-git)} .s-neuro{--sc:var(--s-neuro)} .s-nephro{--sc:var(--s-nephro)} .s-hema{--sc:var(--s-hema)} .s-inf{--sc:var(--s-inf)} .s-rheum{--sc:var(--s-rheum)} .s-endo{--sc:var(--s-endo)}
+.chip .dot{background:var(--sc)}
+.chip.sys[aria-pressed="true"] .dot{background:var(--s-ink)}
+
+/* Digital book page (chest deck): always paper-white, like the printed Z-series page */
+.page{--pg-ink:#1d1f24;--pg-term:#7d1416;--pg-lbl:#8e1b1b;--pg-hl:#fff35c;--pg-hl-o:#ffb04d;--pg-hw:#1f3a9e;--pg-line:#3b3f47;--pg-mcq:#1d3a8a;--pg-mcq-bg:#e4f0fb;
+  background:#fff;color:var(--pg-ink);border-radius:8px;padding:18px 16px 20px;font-family:"Roboto",Arial,sans-serif;font-size:15px;line-height:1.6;display:grid;gap:3px;min-width:0;box-shadow:0 0 0 1px var(--line)}
+.page h4{font-size:19px;font-weight:700;margin:12px 0 4px;line-height:1.3;text-wrap:balance}
+.page h4:first-child{margin-top:0}
+.page h3.ttl{text-align:center;font-size:20px;margin:14px 0 4px}
+.page .sub{font-size:14px;font-weight:400}
+.page .ln{margin:0;display:flex;gap:8px;min-width:0}
+.page p.ln{display:block}
+.page .ln > span:last-child{min-width:0}
+.page .mk{flex:none;font-weight:700;min-width:1.1em}
+.page .l1{padding-left:22px}.page .l2{padding-left:44px}.page .l3{padding-left:66px}
+.page b,.page th{font-weight:700}
+.page mark{background:var(--pg-hl);color:inherit;padding:0 2px;border-radius:2px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.page mark.o{background:var(--pg-hl-o)}
+.page .lbl{background:var(--pg-lbl);color:#fff;font-weight:700;padding:1px 6px;border-radius:2px;display:inline-block;margin:6px 0 2px}
+.page .tm{color:var(--pg-term);font-weight:700}
+.page .hw{font-family:"Caveat","Segoe Print","Comic Sans MS",cursive;color:var(--pg-hw);font-size:1.2em;line-height:1.2;margin-left:4px}
+.page .mcq{font-style:italic;font-weight:700;color:var(--pg-mcq);background:var(--pg-mcq-bg);border:1px solid #a9c8ea;border-radius:3px;padding:0 4px;font-size:.88em;white-space:nowrap}
+.page .nb{font-family:Georgia,serif}
+.page small{font-size:.85em}
+.page .tw{overflow-x:auto;margin:6px 0;-webkit-overflow-scrolling:touch}
+.page table{border-collapse:collapse;width:100%;min-width:480px;font-size:14px;line-height:1.5}
+.page th,.page td{border:1.5px solid var(--pg-line);padding:6px 8px;vertical-align:middle;text-align:left}
+.page th{text-align:center;background:#fafafa}
+.page td:first-child{text-align:center}
+.page figure{margin:10px auto;max-width:100%}
+.page figure img{display:block;max-width:100%;height:auto;margin:0 auto;border-radius:4px}
+.page .cycle{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0;font-size:14px}
+.page .cycle span{border:1.5px solid var(--pg-line);border-radius:6px;padding:3px 8px;background:#fafafa}
+@media (max-width:480px){.page{padding:14px 12px 16px;font-size:14.5px}.page .l1{padding-left:14px}.page .l2{padding-left:28px}.page .l3{padding-left:42px}}
+@media (max-width:480px){.mn dl{grid-template-columns:1fr}.mn dt{margin-top:4px}}
+@media (prefers-reduced-motion: no-preference){.card{transition:border-color .2s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Surgery · Plastic · essay bank Class A, B &amp; C</div>
+    <h1>Surgery Flashcards</h1>
+    <p class="lede">Every plastic surgery question from your 2026 essay bank, answered with the matching section of Surgery In Capsule (Ch 16, Plastic). Tap the card to flip it, then mark <b>Pass</b> or <b>Fail</b>; failed cards come back later and first in line next time. Cards tagged <b>Partial</b> show the closest section, because the book has no section that answers them directly. Your progress is saved.</p>
+    <div class="label" id="lbl-sys">Systems</div>
+    <div class="filters" role="group" aria-labelledby="lbl-sys" id="sysrow"></div>
+    <div class="label" id="lbl-flt">Filter</div>
+    <div class="filters" role="group" aria-labelledby="lbl-flt">
+      <button class="chip" id="f-topics" type="button" aria-expanded="false">Topics: <span id="topics-label">All</span> ▾</button>
+      <button class="chip" id="f-all" type="button" aria-pressed="true">All classes</button>
+      <button class="chip" id="f-A" type="button" aria-pressed="false">Class A</button>
+      <button class="chip" id="f-B" type="button" aria-pressed="false">Class B</button>
+      <button class="chip" id="f-C" type="button" aria-pressed="false">Class C</button>
+      <button class="chip" id="f-failed" type="button" aria-pressed="false">Failed <span id="n-failed"></span></button>
+      <button class="chip" id="shuffle" type="button" aria-pressed="false">🔀 Shuffle</button><button class="chip" id="unshuffle" type="button" disabled>↺ Unshuffle</button>
+    </div>
+    <div class="tpanel" id="tpanel" hidden>
+      <div class="trow"><button class="link" id="t-all" type="button">Select every topic</button><button class="link" id="t-none" type="button">Clear every topic</button><button class="link" id="t-done" type="button">Done</button></div>
+      <div id="tgroups"></div>
+    </div>
+  </header>
+  <section class="progress" aria-live="polite">
+    <div class="stats"><span><b id="s-left">0</b> left</span><span class="stat-pass"><b id="s-pass">0</b> passed</span><span class="stat-fail"><b id="s-fail">0</b> to revise</span><span class="saved" id="saved"></span></div>
+    <div class="bar" aria-hidden="true"><i class="p" id="b-pass"></i><i class="f" id="b-fail"></i></div>
+  </section>
+  <article class="card" id="card" tabindex="0" aria-live="polite"></article>
+  <div class="links"><span id="reset-wrap"></span></div>
+<details class="gh" id="ghBox"><summary>🔄 Sync progress across devices <span id="ghState" class="ghstate"></span></summary>
+  <div id="ghOff"><p>Uses the same GitHub key as your MCQ, Derma and ECG decks. If one of those is already synced on this device, this deck connects by itself.</p>
+  <input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="GitHub key (starts with ghp_ or github_pat_)">
+  <button id="ghConnect" type="button">Connect</button> <span id="ghMsg" class="ghmsg"></span></div>
+  <div id="ghOn" hidden><p>This device is synced. Last sync: <b id="ghLast">—</b></p>
+  <button id="ghNow" type="button">Sync now</button><button id="ghOut" type="button">Disconnect this device</button> <span id="ghMsg2" class="ghmsg"></span></div>
+</details>
+
+</div>
+
+<div class="dock" id="dockwrap"><div class="dock-in" id="dock"></div></div>
+<div class="inkfab" id="inkfab" hidden></div>
+
+<script>
+const DATA = {"systems": [{"key": "plastic", "name": "Plastic", "topics": ["Burn", "Skin Coverage", "Benign Skin Lesions", "Vascular Anomalies", "Malignant Lesions", "Hand Infections", "Hand Swellings"], "n": 45}], "cards": [{"id": "plastic:A1", "sys": "plastic", "cat": "A", "num": "A1", "topic": "Benign Skin Lesions", "q": "Enumerate the types of lipoma.", "partial": false, "fromList": true, "mn": [], "imgs": ["A1-1.jpg"], "pages": "163"}, {"id": "plastic:A2", "sys": "plastic", "cat": "A", "num": "A2", "topic": "Benign Skin Lesions", "q": "Enumerate the types of dermoid cyst.", "partial": false, "fromList": true, "mn": [], "imgs": ["A2-1.jpg"], "pages": "162"}, {"id": "plastic:A3", "sys": "plastic", "cat": "A", "num": "A3", "topic": "Benign Skin Lesions", "q": "Give an explanation why sebaceous cysts do not occur in certain areas of the body.", "partial": false, "fromList": true, "mn": [], "imgs": ["A3-1.jpg"], "pages": "162"}, {"id": "plastic:A4", "sys": "plastic", "cat": "A", "num": "A4", "topic": "Vascular Anomalies", "q": "Enumerate the different clinical types of capillary haemangioma.", "partial": false, "fromList": true, "mn": [], "imgs": ["A4-1.jpg", "A4-2.jpg"], "pages": "164 · 165"}, {"id": "plastic:A5", "sys": "plastic", "cat": "A", "num": "A5", "topic": "Vascular Anomalies", "q": "Discuss the treatment of a strawberry haemangioma in an infant.", "partial": false, "fromList": true, "mn": [], "imgs": ["A5-1.jpg"], "pages": "164"}, {"id": "plastic:A6", "sys": "plastic", "cat": "A", "num": "A6", "topic": "Malignant Lesions", "q": "Discuss the aetiology of basal cell carcinoma (rodent ulcer).", "partial": false, "fromList": true, "mn": [], "imgs": ["A6-1.jpg"], "pages": "170"}, {"id": "plastic:A7", "sys": "plastic", "cat": "A", "num": "A7", "topic": "Malignant Lesions", "q": "Discuss the pathology of basal cell carcinoma (rodent ulcer).", "partial": false, "fromList": true, "mn": [], "imgs": ["A7-1.jpg", "A7-2.jpg", "A7-3.jpg", "A7-4.jpg"], "pages": "170 · 171 · 172"}, {"id": "plastic:A8", "sys": "plastic", "cat": "A", "num": "A8", "topic": "Malignant Lesions", "q": "Give a comparison between basal cell and squamous cell carcinoma (pathological and clinical).", "partial": false, "fromList": true, "mn": [], "imgs": ["A8-1.jpg", "A8-2.jpg", "A8-3.jpg", "A8-4.jpg"], "pages": "170 · 171 · 172 · 173"}, {"id": "plastic:A9", "sys": "plastic", "cat": "A", "num": "A9", "topic": "Malignant Lesions", "q": "Discuss the clinical picture of squamous cell carcinoma.", "partial": false, "fromList": true, "mn": [], "imgs": ["A9-1.jpg", "A9-2.jpg"], "pages": "170 · 171"}, {"id": "plastic:A10", "sys": "plastic", "cat": "A", "num": "A10", "topic": "Malignant Lesions", "q": "Discuss the treatment of squamous cell carcinoma.", "partial": false, "fromList": true, "mn": [], "imgs": ["A10-1.jpg"], "pages": "173"}, {"id": "plastic:A11", "sys": "plastic", "cat": "A", "num": "A11", "topic": "Malignant Lesions", "q": "Discuss the differential diagnosis of ulcers of the face.", "partial": true, "fromList": true, "mn": [], "imgs": ["A11-1.jpg"], "pages": "171"}, {"id": "plastic:A12", "sys": "plastic", "cat": "A", "num": "A12", "topic": "Malignant Lesions", "q": "Give a short account on the types of cutaneous melanoma.", "partial": false, "fromList": true, "mn": [], "imgs": ["A12-1.jpg"], "pages": "174"}, {"id": "plastic:A13", "sys": "plastic", "cat": "A", "num": "A13", "topic": "Malignant Lesions", "q": "Discuss the modes of spread of cutaneous melanoma.", "partial": false, "fromList": true, "mn": [], "imgs": ["A13-1.jpg"], "pages": "174"}, {"id": "plastic:A14", "sys": "plastic", "cat": "A", "num": "A14", "topic": "Malignant Lesions", "q": "Mention the prognostic factors of cutaneous melanoma.", "partial": false, "fromList": true, "mn": [], "imgs": ["A14-1.jpg", "A14-2.jpg"], "pages": "175 · 174"}, {"id": "plastic:A15", "sys": "plastic", "cat": "A", "num": "A15", "topic": "Malignant Lesions", "q": "Describe how to take a biopsy of a suspected cutaneous melanoma.", "partial": false, "fromList": true, "mn": [], "imgs": ["A15-1.jpg"], "pages": "175"}, {"id": "plastic:A21", "sys": "plastic", "cat": "A", "num": "A21", "topic": "Skin Coverage", "q": "Discuss the difference between a partial-thickness and a full-thickness skin graft.", "partial": false, "fromList": true, "mn": [], "imgs": ["A21-1.jpg", "A21-2.jpg"], "pages": "159"}, {"id": "plastic:A22", "sys": "plastic", "cat": "A", "num": "A22", "topic": "Hand Infections", "q": "Enumerate the types of hand infections.", "partial": false, "fromList": true, "mn": [], "imgs": ["A22-1.jpg", "A22-2.jpg", "A22-3.jpg", "A22-4.jpg", "A22-5.jpg"], "pages": "186 · 187 · 188"}, {"id": "plastic:A23", "sys": "plastic", "cat": "A", "num": "A23", "topic": "Hand Infections", "q": "Give the general principles of management of hand-space infections.", "partial": false, "fromList": true, "mn": [], "imgs": ["A23-1.jpg"], "pages": "185"}, {"id": "plastic:A24", "sys": "plastic", "cat": "A", "num": "A24", "topic": "Hand Infections", "q": "Discuss the management of a pulp space infection.", "partial": false, "fromList": true, "mn": [], "imgs": ["A24-1.jpg", "A24-2.jpg"], "pages": "186"}, {"id": "plastic:A28", "sys": "plastic", "cat": "A", "num": "A28", "topic": "Hand Swellings", "q": "Describe the differential diagnosis of a hand swelling.", "partial": true, "fromList": true, "mn": [], "imgs": ["A28-1.jpg"], "pages": "190"}, {"id": "plastic:A30", "sys": "plastic", "cat": "A", "num": "A30", "topic": "Burn", "q": "Discuss the systemic complications of burns.", "partial": false, "fromList": true, "mn": [], "imgs": ["A30-1.jpg", "A30-2.jpg"], "pages": "154"}, {"id": "plastic:A31", "sys": "plastic", "cat": "A", "num": "A31", "topic": "Burn", "q": "Discuss the local complications of burns.", "partial": false, "fromList": true, "mn": [], "imgs": ["A31-1.jpg", "A31-2.jpg"], "pages": "154 · 155"}, {"id": "plastic:A32", "sys": "plastic", "cat": "A", "num": "A32", "topic": "Burn", "q": "Discuss the assessment of the extent of a burn injury.", "partial": false, "fromList": true, "mn": [], "imgs": ["A32-1.jpg"], "pages": "152"}, {"id": "plastic:A33", "sys": "plastic", "cat": "A", "num": "A33", "topic": "Burn", "q": "Discuss the complications of a burn eschar.", "partial": false, "fromList": true, "mn": [], "imgs": ["A33-1.jpg"], "pages": "154"}, {"id": "plastic:A34", "sys": "plastic", "cat": "A", "num": "A34", "topic": "Burn", "q": "Describe the first aid of a burn.", "partial": false, "fromList": true, "mn": [], "imgs": ["A34-1.jpg"], "pages": "156"}, {"id": "plastic:A35", "sys": "plastic", "cat": "A", "num": "A35", "topic": "Burn", "q": "Describe the general treatment of a burn.", "partial": false, "fromList": true, "mn": [], "imgs": ["A35-1.jpg", "A35-2.jpg"], "pages": "156 · 157"}, {"id": "plastic:A36", "sys": "plastic", "cat": "A", "num": "A36", "topic": "Burn", "q": "Describe the local wound care of a burn.", "partial": false, "fromList": true, "mn": [], "imgs": ["A36-1.jpg", "A36-2.jpg", "A36-3.jpg"], "pages": "157 · 158"}, {"id": "plastic:A37", "sys": "plastic", "cat": "A", "num": "A37", "topic": "Burn", "q": "Mention the indications for hospital admission of a burn patient.", "partial": false, "fromList": true, "mn": [], "imgs": ["A37-1.jpg"], "pages": "156"}, {"id": "plastic:A38", "sys": "plastic", "cat": "A", "num": "A38", "topic": "Burn", "q": "Calculate the fluid resuscitation requirements for a major burn.", "partial": false, "fromList": true, "mn": [], "imgs": ["A38-1.jpg", "A38-2.jpg"], "pages": "156 · 157"}, {"id": "plastic:A39", "sys": "plastic", "cat": "A", "num": "A39", "topic": "Burn", "q": "Discuss the nutritional therapy for a major burn.", "partial": false, "fromList": true, "mn": [], "imgs": ["A39-1.jpg"], "pages": "157"}, {"id": "plastic:A40", "sys": "plastic", "cat": "A", "num": "A40", "topic": "Benign Skin Lesions", "q": "Case: soft swelling in the arm (lipoma): gross appearance, complications & treatment.", "partial": false, "fromList": true, "mn": [], "imgs": ["A40-1.jpg", "A40-2.jpg"], "pages": "163"}, {"id": "plastic:A41", "sys": "plastic", "cat": "A", "num": "A41", "topic": "Malignant Lesions", "q": "Basal cell carcinoma (rodent ulcer): incidence & treatment.", "partial": false, "fromList": true, "mn": [], "imgs": ["A41-1.jpg", "A41-2.jpg"], "pages": "170 · 173"}, {"id": "plastic:A42", "sys": "plastic", "cat": "A", "num": "A42", "topic": "Malignant Lesions", "q": "Discuss the treatment of cutaneous melanoma.", "partial": false, "fromList": true, "mn": [], "imgs": ["A42-1.jpg"], "pages": "175"}, {"id": "plastic:A43", "sys": "plastic", "cat": "A", "num": "A43", "topic": "Burn", "q": "Discuss the pathology of second-degree burns.", "partial": false, "fromList": true, "mn": [], "imgs": ["A43-1.jpg", "A43-2.jpg"], "pages": "153"}, {"id": "plastic:B1", "sys": "plastic", "cat": "B", "num": "B1", "topic": "Malignant Lesions", "q": "Discuss the classification of skin malignancies.", "partial": true, "fromList": true, "mn": [], "imgs": ["B1-1.jpg"], "pages": "170"}, {"id": "plastic:B2", "sys": "plastic", "cat": "B", "num": "B2", "topic": "Skin Coverage", "q": "Discuss the different types of flaps used for tissue reconstruction.", "partial": false, "fromList": true, "mn": [], "imgs": ["B2-1.jpg", "B2-2.jpg", "B2-3.jpg"], "pages": "159 · 160 · 161"}, {"id": "plastic:B3", "sys": "plastic", "cat": "B", "num": "B3", "topic": "Hand Infections", "q": "Discuss the pathogenesis of an ingrowing toe nail.", "partial": false, "fromList": true, "mn": [], "imgs": ["B3-1.jpg"], "pages": "189"}, {"id": "plastic:B4", "sys": "plastic", "cat": "B", "num": "B4", "topic": "Hand Infections", "q": "Mention the complications of an ingrowing toe nail.", "partial": false, "fromList": true, "mn": [], "imgs": ["B4-1.jpg"], "pages": "189"}, {"id": "plastic:B5", "sys": "plastic", "cat": "B", "num": "B5", "topic": "Hand Infections", "q": "Discuss the treatment of an ingrowing toe nail.", "partial": false, "fromList": true, "mn": [], "imgs": ["B5-1.jpg", "B5-2.jpg"], "pages": "189"}, {"id": "plastic:B6", "sys": "plastic", "cat": "B", "num": "B6", "topic": "Burn", "q": "Discuss the classification of burns by depth.", "partial": false, "fromList": true, "mn": [], "imgs": ["B6-1.jpg"], "pages": "153"}, {"id": "plastic:B7", "sys": "plastic", "cat": "B", "num": "B7", "topic": "Burn", "q": "Discuss the classification of burns by extent.", "partial": false, "fromList": true, "mn": [], "imgs": ["B7-1.jpg"], "pages": "152"}, {"id": "plastic:B8", "sys": "plastic", "cat": "B", "num": "B8", "topic": "Burn", "q": "Explain the concept of a burn eschar.", "partial": true, "fromList": true, "mn": [], "imgs": ["B8-1.jpg"], "pages": "153"}, {"id": "plastic:C1", "sys": "plastic", "cat": "C", "num": "C1", "topic": "Benign Skin Lesions", "q": "Discuss the complications of a sebaceous cyst.", "partial": false, "fromList": true, "mn": [], "imgs": ["C1-1.jpg"], "pages": "162"}, {"id": "plastic:C2", "sys": "plastic", "cat": "C", "num": "C2", "topic": "Malignant Lesions", "q": "Discuss the different treatment options for skin malignancies.", "partial": true, "fromList": true, "mn": [], "imgs": ["C2-1.jpg", "C2-2.jpg"], "pages": "173 · 175"}, {"id": "plastic:C3", "sys": "plastic", "cat": "C", "num": "C3", "topic": "Burn", "q": "Discuss the assessment of the depth of a burn injury.", "partial": true, "fromList": true, "mn": [], "imgs": ["C3-1.jpg"], "pages": "153"}], "MN": {}, "PAGES": {}};
+const SYSTEMS = DATA.systems, CARDS = DATA.cards, MN = DATA.MN, PAGES = DATA.PAGES;
+const SYS = Object.fromEntries(SYSTEMS.map(s => [s.key, s]));
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const LS = "surgery-fc-v1";
+/* progress: {"sys:cardId": {s:"pass"|"fail", n: fail count, t: time}} */
+let progress = {};
+/* systems: chosen system keys ([] = all). off: "sys|topic" keys switched off in the topic picker. */
+let prefs = {systems:[], off:[], cat:"all", mn:false, shuffle:false, failed:false, rank:null};
+const view = {queue:[], flipped:false, confirmReset:false, hist:[]};
+let dbRef = null, writing = false, pendingWrite = false;
+function fixPrefs(){
+  if (!Array.isArray(prefs.systems)) prefs.systems = [];
+  prefs.systems = prefs.systems.filter(k => SYS[k]);
+  if (!Array.isArray(prefs.off)) prefs.off = [];
+}
+try { const s = JSON.parse(localStorage.getItem(LS) || "null"); if (s) { progress = s.progress || {}; prefs = Object.assign(prefs, s.prefs || {}); } } catch(e){}
+fixPrefs();
+
+const sysOn = k => !prefs.systems.length || prefs.systems.includes(k);
+const tk = (sys, topic) => sys + "|" + topic;
+const inFilter = c => sysOn(c.sys) && !prefs.off.includes(tk(c.sys, c.topic)) && (prefs.cat==="all"||c.cat===prefs.cat) && (!prefs.mn||c.mn.length) && (!prefs.failed||progress[c.id]?.s==="fail");
+function saveLocal(){ try { localStorage.setItem(LS, JSON.stringify({progress, prefs})); } catch(e){} }
+let saveRemote = async function(){
+  if (!dbRef) return;
+  if (writing) { pendingWrite = true; return; }
+  writing = true;
+  try { await dbRef.set({progress, prefs, updated: Date.now()}); $("saved").textContent = "Saved to your account"; }
+  catch(e){ $("saved").textContent = "Saved on this device"; }
+  writing = false;
+  if (pendingWrite) { pendingWrite = false; saveRemote(); }
+}
+function persist(){ saveLocal(); saveRemote(); }
+
+/* Shuffle: crypto-random Fisher–Yates. Every press gives each card a brand-new random rank; Unshuffle drops the ranks. */
+function rnd(n){ try { const a=new Uint32Array(1), lim=Math.floor(4294967296/n)*n; do { crypto.getRandomValues(a); } while (a[0]>=lim); return a[0]%n; } catch(e){ return Math.floor(Math.random()*n); } }
+function newRanks(){
+  const ids = CARDS.map(c=>c.id);
+  for (let i=ids.length-1;i>0;i--){ const j=rnd(i+1); [ids[i],ids[j]]=[ids[j],ids[i]]; }
+  const r = {}; ids.forEach((id,k)=>r[id]=k); return r;
+}
+/* Queue: cards to revise first (oldest fail first), then cards not done yet, in system then book order. Passed cards are done. */
+function buildQueue(){
+  const pool = CARDS.filter(inFilter);
+  if (prefs.shuffle) {
+    if (!prefs.rank || typeof prefs.rank !== "object") prefs.rank = newRanks();
+    const R = prefs.rank;
+    CARDS.forEach(c => { if (R[c.id] === undefined) R[c.id] = CARDS.length + rnd(CARDS.length); });
+    view.queue = pool.filter(c => progress[c.id]?.s !== "pass").sort((a,b) => R[a.id] - R[b.id]);
+  } else {
+    const fails = pool.filter(c => progress[c.id]?.s === "fail").sort((a,b) => progress[a.id].t - progress[b.id].t);
+    const fresh = pool.filter(c => !progress[c.id]);
+    view.queue = [...fails, ...fresh];
+  }
+  view.flipped = false; view.hist = [];
+}
+function doShuffle(){
+  const cur = view.queue[0]?.id;
+  prefs.shuffle = true; prefs.rank = newRanks();
+  buildQueue();
+  if (view.queue.length > 1 && view.queue[0].id === cur) {
+    const R = prefs.rank, a = view.queue[0].id, b = view.queue[1 + rnd(view.queue.length - 1)].id;
+    [R[a], R[b]] = [R[b], R[a]]; buildQueue();
+  }
+  view.confirmReset = false; persist(); render(); window.scrollTo({top:0});
+}
+function doUnshuffle(){ prefs.shuffle = false; prefs.rank = null; view.confirmReset = false; persist(); buildQueue(); render(); window.scrollTo({top:0}); }
+function stats(){
+  const pool = CARDS.filter(inFilter);
+  const pass = pool.filter(c => progress[c.id]?.s === "pass").length;
+  const fail = pool.filter(c => progress[c.id]?.s === "fail").length;
+  $("s-left").textContent = pool.length - pass; $("s-pass").textContent = pass; $("s-fail").textContent = fail;
+  $("b-pass").style.width = (pool.length ? pass/pool.length*100 : 0) + "%";
+  $("b-fail").style.width = (pool.length ? fail/pool.length*100 : 0) + "%";
+  return {pool: pool.length};
+}
+function mnHTML(key){
+  const m = MN[key]; if(!m) return "";
+  return `<div class="mn"><div class="mn-label">Mnemonic</div><div class="mn-title">${esc(m.title)}</div>${m.note?`<p class="mn-note">${esc(m.note)}</p>`:""}<dl>${m.lines.map(([a,b])=>`<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("")}</dl></div>`;
+}
+const PPH = c => { if (!c.pp) return ""; const n = c.pp.split(" · ").length; return `<p class="pp">📅 <b>Came ${n} time${n===1?"":"s"}:</b> ${esc(c.pp)}</p>`; };
+const SRC = {nephro: "Nephro book (Allam Z-series PDF)"};
+const PREV = () => `<button class="btn nav" id="prev" type="button" aria-label="Previous card"${view.hist.length?"":" disabled"}>‹<span class="nl"> Prev</span></button>`;
+const NEXT = () => `<button class="btn nav" id="next" type="button" aria-label="Next card"${view.queue.length>1?"":" disabled"}><span class="nl">Next </span>›</button>`;
+function render(){
+  chips();
+  const st = stats(), card = $("card"), dock = $("dock");
+  const c = view.queue[0];
+  if (!c) {
+    card.innerHTML = `<div class="finish"><h2>${prefs.failed ? (st.pool ? "All passed" : "No failed cards") : st.pool ? "All passed" : "No cards here"}</h2><p>${prefs.failed && !st.pool ? "Every card you failed in this selection has since been passed." : st.pool ? `You passed all ${st.pool} card${st.pool===1?"":"s"} in this selection.` : "Pick at least one system and topic above."}</p>${st.pool?`<div><button class="btn primary" id="again" type="button">Start a new round</button></div>`:""}</div>`;
+    dock.innerHTML = view.hist.length ? PREV() : "";
+    const a = $("again"); if (a) a.onclick = () => { CARDS.filter(inFilter).forEach(x => delete progress[x.id]); persist(); buildQueue(); render(); };
+    $("inkfab").hidden = true; renderReset(); return;
+  }
+  const r = progress[c.id], s = SYS[c.sys];
+  const extra = c.partial ? '<span class="tag extra">Partial · closest section</span>' : "";
+  const tags = `<div class="tags"><span class="tag sys s-${c.sys}">${esc(s.name)}</span><span class="tag cat">Class ${esc(c.cat)} · ${esc(c.num)}</span><span class="tag">${esc(c.topic)}</span>${c.mn.length?'<span class="tag">Mnemonic</span>':""}${extra}${r?.s==="fail"?`<span class="tag revise">Revise · failed ${r.n}×</span>`:""}${inkHas(c.id)?'<span class="tag">✏️ Your notes</span>':""}</div>`;
+  const pen = "";
+  if (!view.flipped) {
+    card.innerHTML = `<div class="front">${tags}<p class="q">${esc(c.q)}${pen}</p>${PPH(c)}<p class="hint">Tap to see the answer</p></div>`;
+    dock.innerHTML = PREV() + `<button class="btn primary" id="flip" type="button">Show answer</button>` + NEXT();
+    $("flip").onclick = flip;
+  } else {
+    const imgs = c.imgs.map((f,k)=>`<div class="scan" data-k="${k}"><img src="${(window.PQIMG||{})[c.sys+"-"+f.replace(/\.jpg$/,"")] || ("img/"+c.sys+"-"+f)}" alt="Answer from Surgery In Capsule, Plastic chapter" decoding="async"><canvas class="ink-h"></canvas><canvas class="ink-p"></canvas></div>`).join("");
+    card.innerHTML = `<div class="back">${tags}<p class="back-q">${esc(c.q)}${pen}</p>${(c.zbook || c.book) ? PPH(c) : ""}${c.mn.map(mnHTML).join("")}${imgs}${PAGES[c.id] ? `<div class="page">${PAGES[c.id]}</div>` : ""}<p class="src">Surgery In Capsule · Ch 16 Plastic · page ${esc(c.pages)}</p></div>`;
+    dock.innerHTML = PREV() + `<button class="btn fail" id="fail" type="button">✗ Fail</button><button class="btn pass" id="pass" type="button">✓ Pass</button>` + NEXT();
+    $("fail").onclick = () => mark("fail"); $("pass").onclick = () => mark("pass");
+    inkAttach(c);
+  }
+  inkRefreshBar();
+  renderReset();
+}
+function mark(s){
+  const c = view.queue[0]; if (!c) return;
+  view.hist.push(c);
+  const prev = progress[c.id];
+  progress[c.id] = {s, n: s==="fail" ? (prev?.n||0)+1 : (prev?.n||0), t: Date.now()};
+  view.queue.shift();
+  if (s === "fail") {
+    if (prefs.shuffle && view.queue.length > 2) view.queue.splice(2 + rnd(view.queue.length - 1), 0, c); else view.queue.push(c);
+  }
+  view.flipped = false; persist(); render(); window.scrollTo({top:0});
+}
+function next(){ const c = view.queue.shift(); if (!c) return; view.hist.push(c); view.queue.push(c); view.flipped=false; render(); window.scrollTo({top:0}); }
+function prev(){
+  const c = view.hist.pop(); if (!c) return;
+  const i = view.queue.indexOf(c); if (i >= 0) view.queue.splice(i, 1);
+  view.queue.unshift(c); view.flipped=false; render(); window.scrollTo({top:0});
+}
+function flip(){ if (!view.queue[0]) return; view.flipped = !view.flipped; render(); if (!view.flipped) window.scrollTo({top:0}); }
+function renderReset(){
+  const w = $("reset-wrap");
+  const narrowed = prefs.systems.length || prefs.off.length || prefs.cat!=="all" || prefs.mn;
+  if (!view.confirmReset) { w.innerHTML = `<button class="link" id="reset" type="button">Reset progress${narrowed?" for these cards":""}</button>`; $("reset").onclick = () => { view.confirmReset = true; renderReset(); }; return; }
+  w.innerHTML = `Clear passes and fails for the cards shown? <button class="link" id="yes" type="button">Yes, reset</button> <button class="link" id="no" type="button">Cancel</button>`;
+  $("yes").onclick = () => { CARDS.filter(inFilter).forEach(x => delete progress[x.id]); view.confirmReset=false; persist(); buildQueue(); render(); };
+  $("no").onclick = () => { view.confirmReset=false; renderReset(); };
+}
+
+/* System chips */
+$("sysrow").innerHTML = `<button class="chip" id="sys-all" type="button">All systems <small>${CARDS.length}</small></button>` +
+  SYSTEMS.map(s => `<button class="chip sys s-${s.key}" id="sys-${s.key}" type="button" data-sys="${s.key}"><span class="dot"></span>${esc(s.name)} <small>${s.n}</small></button>`).join("");
+$("sys-all").onclick = () => { prefs.systems = []; change(); };
+SYSTEMS.forEach(s => $("sys-" + s.key).onclick = () => {
+  const on = prefs.systems.includes(s.key);
+  prefs.systems = on ? prefs.systems.filter(k => k !== s.key) : [...prefs.systems, s.key];
+  change();
+});
+
+/* Topic picker, grouped by the chosen systems */
+function topicGroups(){
+  $("tgroups").innerHTML = SYSTEMS.filter(s => sysOn(s.key)).map(s => {
+    const items = s.topics.map((t,i) => {
+      const n = CARDS.filter(c => c.sys===s.key && c.topic===t).length;
+      return `<label><input type="checkbox" id="tp-${s.key}-${i}" data-sys="${s.key}" value="${esc(t)}"${prefs.off.includes(tk(s.key,t))?"":" checked"}> <span>${esc(t)}</span> <small>${n}</small></label>`;
+    }).join("");
+    const onCount = s.topics.filter(t => !prefs.off.includes(tk(s.key,t))).length;
+    return `<div class="tgroup s-${s.key}"><div class="thead"><h3><span class="dot"></span>${esc(s.name)} <small>${onCount} of ${s.topics.length} topics</small></h3><button class="link" type="button" data-all="${s.key}">All</button><button class="link" type="button" data-none="${s.key}">None</button></div><div class="tlist">${items}</div></div>`;
+  }).join("");
+}
+$("tgroups").addEventListener("change", e => {
+  const b = e.target; if (b.tagName !== "INPUT") return;
+  const k = tk(b.dataset.sys, b.value);
+  prefs.off = b.checked ? prefs.off.filter(x => x !== k) : [...prefs.off, k];
+  change();
+});
+$("tgroups").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const key = b.dataset.all || b.dataset.none; if (!key) return;
+  const keys = SYS[key].topics.map(t => tk(key, t));
+  prefs.off = prefs.off.filter(x => !keys.includes(x));
+  if (b.dataset.none) prefs.off.push(...keys);
+  change();
+});
+function chips(){
+  $("sys-all").setAttribute("aria-pressed", !prefs.systems.length);
+  SYSTEMS.forEach(s => $("sys-" + s.key).setAttribute("aria-pressed", prefs.systems.includes(s.key)));
+  ["all","A","B","C"].forEach(k => $("f-" + k).setAttribute("aria-pressed", prefs.cat===k));
+  $("shuffle").setAttribute("aria-pressed", prefs.shuffle);
+  $("shuffle").textContent = prefs.shuffle ? "🔀 Shuffle again" : "🔀 Shuffle";
+  $("unshuffle").disabled = !prefs.shuffle;
+  const shown = SYSTEMS.filter(s => sysOn(s.key)), total = shown.reduce((a,s) => a + s.topics.length, 0);
+  const on = shown.reduce((a,s) => a + s.topics.filter(t => !prefs.off.includes(tk(s.key,t))).length, 0);
+  $("topics-label").textContent = on===total ? "All" : on===0 ? "None" : `${on} of ${total}`;
+  $("f-failed").setAttribute("aria-pressed", prefs.failed);
+  const nf = CARDS.filter(c => sysOn(c.sys) && progress[c.id]?.s === "fail").length;
+  $("n-failed").textContent = nf ? `(${nf})` : "";
+  if (!$("tpanel").hidden) topicGroups();
+}
+$("f-topics").onclick=()=>{const p=$("tpanel");p.hidden=!p.hidden;$("f-topics").setAttribute("aria-expanded",!p.hidden); if(!p.hidden) topicGroups();};
+$("t-all").onclick=()=>{ const keys = new Set(SYSTEMS.filter(s=>sysOn(s.key)).flatMap(s=>s.topics.map(t=>tk(s.key,t)))); prefs.off = prefs.off.filter(x=>!keys.has(x)); change(); };
+$("t-none").onclick=()=>{ const keys = SYSTEMS.filter(s=>sysOn(s.key)).flatMap(s=>s.topics.map(t=>tk(s.key,t))); prefs.off = [...new Set([...prefs.off, ...keys])]; change(); };
+$("t-done").onclick=()=>{$("tpanel").hidden=true;$("f-topics").setAttribute("aria-expanded","false");};
+$("card").addEventListener("click", e => { if (e.target.closest(".btn, .ink-bar") || (INK.on && e.target.closest(".scan"))) return; flip(); });
+$("card").addEventListener("keydown", e => { if (e.target !== $("card")) return; if (e.key==="Enter"||e.key===" "){ e.preventDefault(); flip(); } });
+$("dock").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; if (b.id==="prev") prev(); else if (b.id==="next") next(); });
+document.addEventListener("keydown", e => {
+  if (e.target.tagName==="INPUT") return;
+  if (view.flipped && INK.on && (e.ctrlKey||e.metaKey) && e.key==="z") { e.preventDefault(); inkUndo(); return; }
+  if (view.flipped) { if (e.key==="p"||e.key==="ArrowRight") mark("pass"); else if (e.key==="f"||e.key==="ArrowLeft") mark("fail"); }
+  else { if (e.key==="ArrowRight") next(); else if (e.key==="ArrowLeft") prev(); }
+});
+const change = () => { view.confirmReset=false; persist(); buildQueue(); render(); };
+["all","A","B","C"].forEach(k => $("f-" + k).onclick = () => { prefs.cat = k; change(); });
+$("shuffle").onclick=doShuffle;
+$("unshuffle").onclick=doUnshuffle;
+$("f-failed").onclick=()=>{prefs.failed=!prefs.failed;change();};
+
+/* ---------- Ink: highlighter & pen over the answer pictures (saved on this device, per card) ---------- */
+const LSI = "surgery-ink-v1";
+const INK = {on:false, tool:"hy", data:{}, undo:[], card:null, clearArm:0, pos:"left"};
+const TOOLS = {
+  hy:{kind:"h", c:"#fff250", w:0.024, label:"Yellow highlighter"},
+  ho:{kind:"h", c:"#ffab4c", w:0.024, label:"Orange highlighter"},
+  pk:{kind:"p", c:"#1d1d1d", w:0.0042, label:"Black pen"},
+  pr:{kind:"p", c:"#d32f2f", w:0.0042, label:"Red pen"},
+  pb:{kind:"p", c:"#1f4fd1", w:0.0042, label:"Blue pen"},
+  ik:{kind:"i", c:"#14182b", w:0.0062, label:"Ink pen (fountain)"},
+  ib:{kind:"i", c:"#1638a8", w:0.0062, label:"Blue ink pen (fountain)"},
+  er:{kind:"e", label:"Eraser"}
+};
+try { INK.data = JSON.parse(localStorage.getItem(LSI) || "{}") || {}; } catch(e) { INK.data = {}; }
+try { const t = localStorage.getItem(LSI + "-tool"); if (TOOLS[t]) INK.tool = t; } catch(e) {}
+try { if (localStorage.getItem(LSI + "-pos") === "top") INK.pos = "top"; } catch(e) {}
+function inkSave(){ try { localStorage.setItem(LSI, JSON.stringify(INK.data)); } catch(e) {} }
+function inkHas(id){ const d = INK.data[id]; return !!d && Object.values(d).some(a => a && a.length); }
+function inkStrokes(id, k){ const d = INK.data[id] || (INK.data[id] = {}); return d[k] || (d[k] = []); }
+function inkBar(){
+  const sw = (k) => { const t = TOOLS[k];
+    if (t.kind === "e") return `<button type="button" data-tool="er" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool==="er"}">🧽</button>`;
+    if (t.kind === "i") return `<button type="button" class="ink" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span style="font-size:18px;line-height:1;border-bottom:4px solid ${t.c};padding-bottom:1px">✒️</span></button>`;
+    return `<button type="button" class="${t.kind==="h"?"hl":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
+  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
+  return `<button type="button" class="tog" data-act="toggle" aria-pressed="${INK.on}" aria-label="${INK.on ? "Stop drawing" : "Draw on the answer"}" title="${INK.on ? "Stop drawing" : "Draw on the answer"}">${INK.on ? "✓" : "✏️"}</button>${tools}`;
+}
+function inkRefreshBar(){ const f = $("inkfab"); if (!f) return; f.classList.toggle("top", INK.pos === "top"); f.innerHTML = inkBar(); f.hidden = !(view.flipped && view.queue[0]); vvPlace(); }
+function inkDraw(scan){
+  const c = INK.card; if (!c) return;
+  const k = +scan.dataset.k, img = scan.querySelector("img"), ch = scan.querySelector(".ink-h"), cp = scan.querySelector(".ink-p");
+  const w = img.clientWidth, h = img.clientHeight; if (!w || !h) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  for (const cv of [ch, cp]) {
+    cv.style.width = w + "px"; cv.style.height = h + "px";
+    if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)) { cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
+    cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
+  }
+  const S = w * dpr;
+  for (const st of inkStrokes(c.id, k)) inkStroke(st.k === "h" ? ch : cp, st, S);
+}
+function inkStroke(cv, st, S){
+  const g = cv.getContext("2d"), P = st.p; if (!P.length) return;
+  if (st.k === "i") return inkFountain(g, st, S);
+  g.lineCap = st.k === "h" ? "butt" : "round"; g.lineJoin = "round"; g.strokeStyle = st.c; g.lineWidth = st.w * S; g.globalAlpha = 1;
+  g.beginPath(); g.moveTo(P[0][0]*S, P[0][1]*S);
+  if (P.length === 1) g.lineTo(P[0][0]*S + 0.01, P[0][1]*S);
+  for (let i = 1; i < P.length; i++) g.lineTo(P[i][0]*S, P[i][1]*S);
+  g.stroke();
+}
+/* Fountain-style ink: smoothed curve whose width follows speed/pressure (slow = thicker, fast = thinner), tapered ends. */
+function inkFountain(g, st, S){
+  const P = st.p, n = P.length; g.fillStyle = st.c; g.strokeStyle = st.c; g.lineCap = "round"; g.lineJoin = "round";
+  const W = i => { const f = P[i][2] == null ? 1 : P[i][2]; const taper = Math.min(1, 0.45 + 0.55 * Math.min(i, n - 1 - i) / 3); return Math.max(0.35, f * taper) * st.w * S; };
+  if (n === 1) { g.beginPath(); g.arc(P[0][0]*S, P[0][1]*S, W(0)/2, 0, 7); g.fill(); return; }
+  const mid = (a, b) => [(a[0]+b[0])/2, (a[1]+b[1])/2];
+  let prev = [P[0][0], P[0][1]];
+  for (let i = 1; i < n; i++) {
+    const m = i < n - 1 ? mid(P[i], P[i+1]) : [P[i][0], P[i][1]];
+    g.beginPath(); g.lineWidth = (W(i-1) + W(i)) / 2;
+    g.moveTo(prev[0]*S, prev[1]*S); g.quadraticCurveTo(P[i][0]*S, P[i][1]*S, m[0]*S, m[1]*S); g.stroke();
+    prev = m;
+  }
+}
+function inkAttach(c){
+  INK.card = c; INK.undo = []; INK.clearArm = 0;
+  const card = $("card"); card.classList.toggle("inking", INK.on);
+  card.querySelectorAll(".scan").forEach(scan => {
+    const img = scan.querySelector("img"), cp = scan.querySelector(".ink-p"), k = +scan.dataset.k;
+    const redraw = () => inkDraw(scan);
+    if (img.complete) redraw(); else img.addEventListener("load", redraw, {once:true});
+    if (window.ResizeObserver) new ResizeObserver(redraw).observe(img);
+    let cur = null, holdT = null, holdAt = null;
+    const pos = (x, y) => { const r = cp.getBoundingClientRect(); const w = r.width || 1; return [+(((x - r.left) / w).toFixed(4)), +(((y - r.top) / w).toFixed(4))]; };
+    const eraseAt = (pt) => {
+      const arr = inkStrokes(c.id, k), rad = 0.018, gone = [];
+      for (let i = arr.length - 1; i >= 0; i--) {
+        const st = arr[i], lim = rad + st.w/2;
+        if (st.p.some(q => Math.hypot(q[0]-pt[0], q[1]-pt[1]) < lim)) { gone.push([i, st]); arr.splice(i, 1); }
+      }
+      if (gone.length) { INK.undo.push({t:"erase", k, items:gone}); inkDraw(scan); }
+    };
+    const layer = () => cur && cur.k === "h" ? scan.querySelector(".ink-h") : cp;
+    const redrawCur = () => { inkDraw(scan); if (cur && !cur.erase) inkStroke(layer(), cur, cp.width); };
+    /* Hold still at the end of a stroke for ~0.5 s -> it snaps to a perfectly straight line (like Apple Notes). */
+    const armHold = (pt) => {
+      clearTimeout(holdT); holdAt = pt;
+      holdT = setTimeout(() => {
+        if (!cur || cur.erase || cur.straight) return;
+        const p0 = cur.p[0];
+        if (Math.hypot(pt[0]-p0[0], pt[1]-p0[1]) < 0.03) return;   // too short to be a line
+        cur.straight = true; cur.p = [p0, cur.k === "i" ? [pt[0], pt[1], 1] : pt]; redrawCur();
+        try { navigator.vibrate && navigator.vibrate(8); } catch(e) {}
+      }, 480);
+    };
+    scan._ink = {
+      begin(x, y){
+        const t = TOOLS[INK.tool], pt = pos(x, y);
+        if (t.kind === "e") { cur = {erase:true}; eraseAt(pt); return; }
+        cur = {k:t.kind, c:t.c, w:t.w, p:[t.kind === "i" ? [pt[0], pt[1], 1] : pt]};
+        if (t.kind === "h") { cur.y0 = pt[1]; cur.x0 = cur.x1 = pt[0]; }
+        cur.lt = performance.now();
+        inkStroke(layer(), cur, cp.width); if (t.kind !== "h") armHold(pt);
+      },
+      move(x, y){
+        if (!cur) return;
+        const pt = pos(x, y);
+        if (cur.erase) { eraseAt(pt); return; }
+        if (cur.k === "h") {   // highlighter: always a perfectly horizontal bar at the starting height
+          cur.x0 = Math.min(cur.x0, pt[0]); cur.x1 = Math.max(cur.x1, pt[0]);
+          cur.p = [[cur.x0, cur.y0], [cur.x1, cur.y0]]; redrawCur(); return;
+        }
+        if (cur.straight) { cur.p[1] = cur.k === "i" ? [pt[0], pt[1], 1] : pt; redrawCur(); return; }   // after snapping, the end follows the finger and stays straight
+        const L = cur.p[cur.p.length - 1];
+        if (Math.hypot(pt[0]-L[0], pt[1]-L[1]) < 0.0025) return;
+        if (!holdAt || Math.hypot(pt[0]-holdAt[0], pt[1]-holdAt[1]) > 0.006) armHold(pt);
+        if (cur.k === "i") {
+          const now = performance.now(), dt = Math.max(4, now - cur.lt), v = Math.hypot(pt[0]-L[0], pt[1]-L[1]) / dt * 1000;   // page-widths per second
+          let f = 1.45 - Math.min(1.05, v * 0.9);  if (cur.force) f = 0.55 + cur.force * 1.1;
+          f = L[2] * 0.6 + f * 0.4; cur.lt = now; cur.p.push([pt[0], pt[1], +f.toFixed(3)]); redrawCur(); return;
+        }
+        cur.p.push(pt);
+        inkStroke(cp, {k:cur.k, c:cur.c, w:cur.w, p:[L, pt]}, cp.width);
+      },
+      end(){
+        clearTimeout(holdT); holdAt = null;
+        if (!cur) return;
+        if (!cur.erase && cur.p.length) { delete cur.straight; delete cur.x0; delete cur.x1; delete cur.y0; delete cur.lt; delete cur.force; inkStrokes(c.id, k).push(cur); INK.undo.push({t:"add", k}); }
+        cur = null; inkSave(); inkDraw(scan);
+      },
+      cancel(){ clearTimeout(holdT); holdAt = null; if (cur && !cur.erase) { cur = null; inkDraw(scan); } cur = null; }
+    };
+    /* mouse & stylus: pointer events (touch is handled by the card-level gesture code below) */
+    cp.addEventListener("pointerdown", e => {
+      if (!INK.on || e.pointerType === "touch") return;
+      e.preventDefault(); cp.setPointerCapture?.(e.pointerId); scan._ink.begin(e.clientX, e.clientY); scan._pid = e.pointerId;
+    });
+    cp.addEventListener("pointermove", e => { if (e.pointerType !== "touch" && scan._pid === e.pointerId) { if (e.pointerType === "pen" && cur && e.pressure) cur.force = e.pressure; scan._ink.move(e.clientX, e.clientY); } });
+    const pend = e => { if (e.pointerType !== "touch" && scan._pid === e.pointerId) { scan._pid = null; scan._ink.end(); } };
+    cp.addEventListener("pointerup", pend); cp.addEventListener("pointercancel", pend);
+  });
+}
+
+/* Touch gestures while drawing: one finger draws; two fingers pan the page in any direction
+   (up/down and left/right, e.g. when zoomed in), smoothly and with momentum.
+   Handled once at card level using touch events, so both fingers are read together in a single event. */
+(() => {
+  const T = {mode:null, scan:null, x:null, y:null, vx:0, vy:0, t:0, raf:0};
+  const avg = (ts, k) => { let s = 0; for (const t of ts) s += t[k]; return s / ts.length; };
+  const stopGlide = () => { cancelAnimationFrame(T.raf); T.raf = 0; };
+  const pan = (dx, dy) => {
+    // Move the visible area; when pinch-zoomed this also slides the zoomed view sideways.
+    const vv = window.visualViewport, bx = window.scrollX, by = window.scrollY, ox = vv ? vv.offsetLeft : 0, oy = vv ? vv.offsetTop : 0;
+    window.scrollBy(dx, dy);
+    if (vv && vv.scale > 1.01 && Math.abs(dx) > 0.5 && window.scrollX === bx && vv.offsetLeft === ox) {
+      // Some browsers keep the zoomed view still on scrollBy; nudge it with scrollTo on the visual position instead.
+      window.scrollTo(vv.pageLeft + dx, vv.pageTop + dy);
+    }
+  };
+  const glide = () => {
+    stopGlide();
+    let vx = T.vx, vy = T.vy, last = performance.now();
+    const step = now => {
+      const dt = Math.min(32, now - last); last = now;
+      pan(-vx * dt, -vy * dt); const k = Math.pow(0.95, dt / 16); vx *= k; vy *= k;
+      if (Math.hypot(vx, vy) > 0.02) T.raf = requestAnimationFrame(step); else T.raf = 0;
+    };
+    if (Math.hypot(vx, vy) > 0.1) T.raf = requestAnimationFrame(step);
+  };
+  const reset = ts => { T.x = avg(ts, "clientX"); T.y = avg(ts, "clientY"); };
+  const card = $("card");
+  card.addEventListener("touchstart", e => {
+    if (!INK.on || !view.flipped) return;
+    const scan = e.target.closest && e.target.closest(".scan");
+    if (!scan && T.mode !== "draw" && T.mode !== "scroll") return;
+    e.preventDefault(); stopGlide();
+    if (e.touches.length >= 2) {
+      if (T.mode === "draw" && T.scan) T.scan._ink.cancel();   // second finger arrived: drop the half-started stroke, no stray mark
+      T.mode = "scroll"; reset(e.touches); T.vx = 0; T.vy = 0; T.t = performance.now(); return;
+    }
+    if (T.mode === "scroll") return;   // a finger left over from a scroll never starts drawing
+    T.mode = "draw"; T.scan = scan; const t = e.touches[0]; scan._ink.begin(t.clientX, t.clientY);
+  }, {passive:false});
+  card.addEventListener("touchmove", e => {
+    if (!T.mode) return;
+    e.preventDefault();
+    if (T.mode === "scroll") {
+      if (e.touches.length < 2) { reset(e.touches); return; }
+      const x = avg(e.touches, "clientX"), y = avg(e.touches, "clientY"), now = performance.now();
+      const dx = x - T.x, dy = y - T.y, dt = Math.max(1, now - T.t);
+      pan(-dx, -dy);
+      T.vx = 0.7 * T.vx + 0.3 * (dx / dt); T.vy = 0.7 * T.vy + 0.3 * (dy / dt);
+      T.x = x; T.y = y; T.t = now; return;
+    }
+    const t = e.touches[0]; T.scan && T.scan._ink.move(t.clientX, t.clientY);
+  }, {passive:false});
+  const done = e => {
+    if (!T.mode) return;
+    if (T.mode === "draw") { T.scan && T.scan._ink.end(); T.mode = null; T.scan = null; return; }
+    if (e.touches.length === 0) { T.mode = null; if (performance.now() - T.t < 80) glide(); }
+    else reset(e.touches);
+  };
+  card.addEventListener("touchend", done); card.addEventListener("touchcancel", done);
+})();
+function inkUndo(){
+  const c = INK.card, a = INK.undo.pop(); if (!c || !a) return;
+  if (a.t === "add") inkStrokes(c.id, a.k).pop();
+  else if (a.t === "erase") { const arr = inkStrokes(c.id, a.k); a.items.slice().reverse().forEach(([i, st]) => arr.splice(i, 0, st)); }
+  else if (a.t === "clear") INK.data[c.id] = a.data;
+  inkSave(); document.querySelectorAll("#card .scan").forEach(inkDraw);
+}
+$("inkfab").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  e.stopPropagation();
+  const c = INK.card;
+  if (b.dataset.tool) { INK.tool = b.dataset.tool; try { localStorage.setItem(LSI + "-tool", INK.tool); } catch(err) {} INK.clearArm = 0; inkRefreshBar(); return; }
+  const act = b.dataset.act;
+  if (act === "toggle") { INK.on = !INK.on; INK.clearArm = 0; $("card").classList.toggle("inking", INK.on); inkRefreshBar(); return; }
+  if (act === "undo") { inkUndo(); return; }
+  if (act === "pos") { INK.pos = INK.pos === "top" ? "left" : "top"; try { localStorage.setItem(LSI + "-pos", INK.pos); } catch(err) {} INK.clearArm = 0; inkRefreshBar(); return; }
+  if (act === "clear" && c) {
+    if (!INK.clearArm) { INK.clearArm = 1; inkRefreshBar(); setTimeout(() => { if (INK.clearArm) { INK.clearArm = 0; inkRefreshBar(); } }, 3000); return; }
+    INK.clearArm = 0; INK.undo.push({t:"clear", data: JSON.parse(JSON.stringify(INK.data[c.id] || {}))});
+    delete INK.data[c.id]; inkSave(); document.querySelectorAll("#card .scan").forEach(inkDraw); inkRefreshBar();
+  }
+}, true);
+
+/* Keep the bottom bar and the pen button glued to what is actually on screen (iOS Safari zoom / toolbar changes). */
+function vvPlace(){
+  const v = window.visualViewport; const d = $("dockwrap"), f = $("inkfab");
+  if (!v) return;
+  const de = document.documentElement, LH = de.clientHeight;   // layout-viewport height (window.innerHeight changes with zoom on iOS)
+  const s = v.scale || 1, zoomed = Math.abs(s - 1) > 0.01;
+  const dy = v.offsetTop + v.height - LH;
+  d.style.transform = (zoomed || Math.abs(dy) > 1 || v.offsetLeft) ? `translate(${v.offsetLeft}px, ${dy}px) scale(${1/s})` : "";
+  if (f) f.style.transform = (zoomed || v.offsetTop || v.offsetLeft) ? `translate(${v.offsetLeft}px, ${v.offsetTop}px) scale(${1/s})` : "";
+}
+/* follow every frame while the page is zoomed or moving, so the bars never lag behind or slip off screen */
+let vvRaf = 0, vvIdle = 0;
+function vvTick(){ vvPlace(); const v = window.visualViewport; if ((v && Math.abs((v.scale||1) - 1) > 0.01) || ++vvIdle < 30) vvRaf = requestAnimationFrame(vvTick); else vvRaf = 0; }
+function vvKick(){ vvIdle = 0; if (!vvRaf) vvRaf = requestAnimationFrame(vvTick); }
+if (window.visualViewport) { visualViewport.addEventListener("resize", vvKick); visualViewport.addEventListener("scroll", vvKick); }
+["scroll","resize","touchmove","touchend","gesturechange","gestureend","orientationchange"].forEach(ev => window.addEventListener(ev, vvKick, {passive:true}));
+buildQueue(); render();
+$("saved").textContent = "Saved on this device";
+
+/* ---------- GitHub sync (same key as the other decks) ---------- */
+const GH = { tokKey: "imq-gh-token", gistKey: "surgery-gh-gist", file: "surgery-progress.json", api: "https://api.github.com" };
+const ghGet = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const ghPut = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
+let ghTok = ghGet(GH.tokKey), ghGist = ghGet(GH.gistKey), ghBusy = false, ghAgain = false, ghT = 0;
+const stateNow = () => ({ progress, prefs, updated: Number(ghGet("surgery-updated")) || 0 });
+async function ghFetch(path, opt) {
+  const r = await fetch(GH.api + path, Object.assign({ cache: "no-store" }, opt || {}, { headers: Object.assign({ "Authorization": "Bearer " + ghTok, "Accept": "application/vnd.github+json" }, (opt && opt.body) ? { "Content-Type": "application/json" } : {}) }));
+  if (!r.ok) { const e = new Error("github " + r.status); e.status = r.status; throw e; }
+  return r.json();
+}
+async function ghFind() {
+  if (ghGist) { try { await ghFetch("/gists/" + ghGist); return ghGist; } catch (e) { if (e.status === 401) throw e; } }
+  for (let page = 1; page <= 10; page++) {
+    const L = await ghFetch("/gists?per_page=100&page=" + page);
+    const hit = L.find(g => g.files && g.files[GH.file]); if (hit) { ghGist = hit.id; ghPut(GH.gistKey, ghGist); return ghGist; }
+    if (L.length < 100) break;
+  }
+  const made = await ghFetch("/gists", { method: "POST", body: JSON.stringify({ public: false, description: "Surgery flashcards progress (synced between devices)", files: { [GH.file]: { content: JSON.stringify(stateNow()) } } }) });
+  ghGist = made.id; ghPut(GH.gistKey, ghGist); return ghGist;
+}
+async function ghRead() {
+  const g = await ghFetch("/gists/" + ghGist); const f = g.files && g.files[GH.file]; if (!f) return null;
+  let t = f.content; if (f.truncated) t = await (await fetch(f.raw_url, { cache: "no-store" })).text();
+  try { return JSON.parse(t); } catch (e) { return null; }
+}
+function applyTheirs(t) {
+  if (!t || !t.progress) return;
+  const before = JSON.stringify(progress), merged = Object.assign({}, t.progress);
+  for (const id in progress) if (!merged[id] || (progress[id].t || 0) >= (merged[id].t || 0)) merged[id] = progress[id];
+  // cards cleared on a newer device stay cleared
+  if ((t.updated || 0) > (stateNow().updated || 0)) { for (const id in merged) if (!(id in t.progress) && (merged[id].t || 0) < t.updated) delete merged[id]; if (t.prefs) prefs = Object.assign(prefs, t.prefs); ghPut("surgery-updated", String(t.updated)); }
+  progress = merged; fixPrefs(); saveLocal();
+  if (JSON.stringify(progress) !== before) { buildQueue(); render(); }
+}
+async function ghSync() {
+  if (!ghTok) return;
+  if (ghBusy) { ghAgain = true; return; }
+  ghBusy = true;
+  try {
+    await ghFind(); const t = await ghRead(); applyTheirs(t);
+    const mine = stateNow();
+    if (!t || JSON.stringify(t.progress) !== JSON.stringify(mine.progress) || JSON.stringify(t.prefs) !== JSON.stringify(mine.prefs))
+      await ghFetch("/gists/" + ghGist, { method: "PATCH", body: JSON.stringify({ files: { [GH.file]: { content: JSON.stringify(mine) } } }) });
+    $("ghLast").textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); ghShow(true);
+    $("saved").textContent = "Synced across your devices";
+  } catch (e) {
+    if (e.status === 401) { ghTok = ""; ghShow(false); ghMsg("Your GitHub key stopped working — paste a new one", "bad"); $("ghBox").open = true; }
+    else if (e.status === 404) { ghGist = ""; ghPut(GH.gistKey, ""); }
+  } finally { ghBusy = false; if (ghAgain) { ghAgain = false; setTimeout(ghSync, 1200); } }
+}
+saveRemote = async function () { ghPut("surgery-updated", String(Date.now())); clearTimeout(ghT); ghT = setTimeout(() => { if (ghTok) ghSync(); }, 2000); };
+const ghMsg = (t, c, el) => { const m = $(el || "ghMsg"); m.textContent = t; m.className = "ghmsg" + (c ? " " + c : ""); };
+function ghShow(on) { $("ghOff").hidden = on; $("ghOn").hidden = !on; const s = $("ghState"); s.textContent = on ? "● on" : "○ off"; s.className = "ghstate" + (on ? " on" : ""); }
+$("ghConnect").onclick = async () => {
+  const t = $("ghToken").value.trim(); if (!t) { ghMsg("Paste your GitHub key first", "bad"); return; }
+  ghTok = t; ghMsg("Connecting…");
+  try { await ghFetch("/user"); ghPut(GH.tokKey, t); $("ghToken").value = ""; ghMsg(""); await ghSync(); ghMsg("Connected ✓ progress merged", "ok", "ghMsg2"); }
+  catch (e) { ghTok = ""; ghMsg(e.status === 401 ? "That key isn't valid (check you copied all of it)" : "Couldn't reach GitHub — try again", "bad"); }
+};
+$("ghNow").onclick = async () => { ghMsg("Syncing…", "", "ghMsg2"); await ghSync(); ghMsg("Synced ✓", "ok", "ghMsg2"); };
+$("ghOut").onclick = () => { ghPut(GH.tokKey, ""); ghPut(GH.gistKey, ""); ghTok = ""; ghGist = ""; ghShow(false); ghMsg("Disconnected. Your progress stays on this device."); };
+document.addEventListener("visibilitychange", () => { if (ghTok) ghSync(); });
+setInterval(() => { if (ghTok && document.visibilityState === "visible") ghSync(); }, 20000);
+ghShow(!!ghTok); if (ghTok) ghSync();
+
+/* ---------- Password lock: answers are stored encrypted ---------- */
+const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "TS++cTtdWXaCL6ZQhTJP6T9lY2CdS69rBLX4DUKIss9A4xzrvFk=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin"] };
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function keyFrom(pw) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: b64(ENC.salt), iterations: ENC.iter, hash: "SHA-256" }, base, 256));
+}
+async function dec(raw, bytes) {
+  const k = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+  return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.slice(0, 12) }, k, bytes.slice(12)));
+}
+async function unlock(raw) {
+  const ok = new TextDecoder().decode(await dec(raw, b64(ENC.check)));
+  if (ok !== "surgery-ok") throw new Error("bad");
+  const parts = await Promise.all(ENC.files.map(async f => {
+    const r = await fetch(f); if (!r.ok) throw new Error("load " + f);
+    return JSON.parse(new TextDecoder().decode(await dec(raw, new Uint8Array(await r.arrayBuffer()))));
+  }));
+  window.PQIMG = Object.assign({}, ...parts);
+  $("lock").remove(); render();
+}
+(async () => {
+  const saved = ghGet("surgery-key");
+  if (saved) { try { await unlock(b64(saved)); return; } catch (e) { ghPut("surgery-key", ""); } }
+  $("lockPw").focus();
+})();
+$("lockForm").onsubmit = async e => {
+  e.preventDefault(); const pw = $("lockPw").value; if (!pw) return;
+  $("lockMsg").textContent = "Opening…";
+  try { const raw = await keyFrom(pw); await unlock(raw); ghPut("surgery-key", btoa(String.fromCharCode(...raw))); }
+  catch (err) { $("lockMsg").textContent = String(err.message).startsWith("load") ? "Couldn't load the answers — check your connection" : "Wrong password"; }
+};
+</script>
+
+</body></html>
