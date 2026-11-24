@@ -58,6 +58,19 @@ body.nokw mark.kw{background:none;padding:0}
 .srcchips{display:flex;flex-wrap:wrap;gap:6px}
 .schip{font:600 14px var(--body);border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;font-variant-numeric:tabular-nums}
 .schip:hover{border-color:var(--accent)}
+.tpwrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;align-items:start}
+.tphead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:700;color:var(--navy);font-size:14px}.tphead small{font-weight:500;color:var(--muted)}
+.tpdd{border:1.5px solid var(--line);border-radius:10px;background:var(--card)}
+.tpdd[open]{border-color:var(--accent)}
+.tpdd summary{list-style:none;cursor:pointer;padding:9px 12px;font:600 14px var(--body);color:var(--ink);display:flex;justify-content:space-between;gap:8px}
+.tpdd summary::-webkit-details-marker{display:none}.tpdd summary::after{content:"▾";color:var(--accent)}.tpdd[open] summary::after{content:"▴"}
+.tpdd summary b{color:var(--accent);font-weight:700}
+.tplist{border-top:1px solid var(--line);padding:6px 8px 8px;display:grid;gap:2px;max-height:330px;overflow:auto}
+.picker .tplist label{display:flex;flex-direction:row;flex:none;gap:10px;align-items:center;padding:7px 6px;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;color:var(--ink)}
+.tplist label:hover{background:var(--chip)}.picker .tplist input{width:18px;height:18px;accent-color:var(--accent);flex:none}
+.tplist label span{flex:1}.tplist label em{font-style:normal;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.tpbtns{display:flex;gap:6px;padding:2px 4px 6px}.tpbtns button{font:600 13px var(--body);border:1px solid var(--line);background:var(--bg);color:var(--navy);border-radius:8px;padding:5px 10px;cursor:pointer}
+#topicMsg{color:var(--bad);font-weight:700;font-size:14px}
 .schip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:var(--card)}
 .schip[aria-pressed="true"]::before{content:"✓ "}
 .schip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -148,6 +161,10 @@ select{font:15px var(--body);padding:8px 10px;border-radius:9px;border:1px solid
       <label for="setSel">Question set<select id="setSel"></select></label>
       <label for="orderSel">Order<select id="orderSel"><option value="seq">In order</option><option value="rand">Shuffled</option><option value="rep">Most repeated first</option></select></label>
     </div>
+    <div class="tpsec" id="tpSec"><div class="tphead"><span>Choose topics</span><small>tick one or more chapters in either paper; you can mix both</small></div>
+      <div class="tpwrap"><details class="tpdd" id="tpdd1"><summary>Paper 1 topics <b id="tpc1">none</b></summary><div class="tpbtns"><button type="button" data-p="1" data-a="all">Select all</button><button type="button" data-p="1" data-a="none">Clear</button></div><div class="tplist" id="tpl1"></div></details>
+      <details class="tpdd" id="tpdd2"><summary>Paper 2 topics <b id="tpc2">none</b></summary><div class="tpbtns"><button type="button" data-p="2" data-a="all">Select all</button><button type="button" data-p="2" data-a="none">Clear</button></div><div class="tplist" id="tpl2"></div></details></div>
+      <div id="topicMsg" role="status"></div></div>
     <div class="srcwrap" hidden role="group" aria-labelledby="srcLbl"><div class="srchead"><span id="srcLbl">Source</span><span class="srchint">tap to pick one or more</span></div><div class="srcchips" id="srcChips"></div></div>
     <div class="row">
       <label class="check" for="onlyWrong"><input type="checkbox" id="onlyWrong"> Only questions I got wrong before</label>
@@ -318,6 +335,46 @@ function paintSrc() {
   document.querySelectorAll("#srcChips .schip").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === "any" ? srcPicked.size === 0 : srcPicked.has(b.dataset.v))));
 }
 SETS.forEach(s => { const o = document.createElement("option"); o.value = s.id; o.textContent = s.label + " (" + s.n + ")"; setSel.appendChild(o); });
+/* ---------- topic picker (several chapters from Paper 1 and/or Paper 2) ---------- */
+const TOPICS = SETS.filter(s => /^ch\d+$/.test(s.id)).map(s => ({ ch: s.id.slice(2), paper: DATA[s.ids[0]].sys === "Paper 1" ? 1 : 2, name: DATA[s.ids[0]].set, ids: s.ids }));
+const topicPicked = new Set();
+(function () { const o = document.createElement("option"); o.value = "custom"; o.textContent = "My chosen topics (tick them below)"; setSel.insertBefore(o, setSel.options[1] || null); })();
+function paintTopics() {
+  document.querySelectorAll(".tplist input").forEach(b => { b.checked = topicPicked.has(b.value); });
+  [1, 2].forEach(p => { const all = TOPICS.filter(t => t.paper === p), k = all.filter(t => topicPicked.has(t.ch)).length; $("#tpc" + p).textContent = k === 0 ? "none" : k === all.length ? "all " + k : k + " of " + all.length; });
+  const n = TOPICS.filter(t => topicPicked.has(t.ch)).reduce((a, t) => a + t.ids.length, 0);
+  const o = setSel.querySelector('option[value="custom"]'); o.textContent = "My chosen topics" + (topicPicked.size ? " (" + n + ")" : " (tick them below)");
+  $("#topicMsg").textContent = "";
+}
+function topicsChanged() { if (topicPicked.size) setSel.value = "custom"; else if (setSel.value === "custom") setSel.value = "all"; paintTopics(); }
+[1, 2].forEach(p => {
+  TOPICS.filter(t => t.paper === p).forEach(t => {
+    const l = document.createElement("label"), i = document.createElement("input"), sp = document.createElement("span"), em = document.createElement("em");
+    i.type = "checkbox"; i.value = t.ch; sp.textContent = t.name; em.textContent = t.ids.length;
+    i.onchange = () => { i.checked ? topicPicked.add(t.ch) : topicPicked.delete(t.ch); topicsChanged(); };
+    l.append(i, sp, em); $("#tpl" + p).appendChild(l);
+  });
+});
+document.querySelectorAll(".tpbtns button").forEach(b => b.onclick = () => { const p = +b.dataset.p; TOPICS.filter(t => t.paper === p).forEach(t => b.dataset.a === "all" ? topicPicked.add(t.ch) : topicPicked.delete(t.ch)); topicsChanged(); });
+setSel.addEventListener("change", () => { if (setSel.value !== "custom") topicPicked.clear(); paintTopics(); });
+function curSetId() { return setSel.value === "custom" ? "t:" + TOPICS.filter(t => topicPicked.has(t.ch)).map(t => t.ch).join(",") : setSel.value; }
+function getSet(id) {
+  if (id && id.startsWith("t:")) {
+    const chs = id.slice(2).split(",").filter(Boolean), ts = TOPICS.filter(t => chs.includes(t.ch));
+    const ids = ts.flatMap(t => t.ids);
+    const byP = [1, 2].map(p => ts.filter(t => t.paper === p)).filter(a => a.length);
+    const label = ts.length === 1 ? "Paper " + ts[0].paper + " · " + ts[0].name : byP.map(a => "Paper " + a[0].paper + ": " + (a.length <= 3 ? a.map(t => t.name).join(", ") : a.length + " topics")).join(" + ");
+    return { id, label: label || "My chosen topics", ids, n: ids.length };
+  }
+  return SETS.find(s => s.id === id) || SETS[0];
+}
+function selectSet(id) {
+  topicPicked.clear();
+  if (id && id.startsWith("t:")) { id.slice(2).split(",").filter(Boolean).forEach(c => topicPicked.add(c)); setSel.value = topicPicked.size ? "custom" : "all"; }
+  else if (SETS.some(s => s.id === id)) setSel.value = id;
+  paintTopics();
+}
+paintTopics();
 (function buildSources() {
   const years = {}; let book = 0, other = 0;
   DATA.forEach(q => { (q.yrs || []).forEach(y => { years[y] = (years[y] || 0) + 1; }); if (q.book) book++; if (!(q.yrs || []).length && !q.book) other++; });
@@ -334,7 +391,7 @@ SETS.forEach(s => { const o = document.createElement("option"); o.value = s.id; 
   if (other) add("other", "Other sources, no exam year (" + other + ")");
 })();
 function applyPickerFromStore() {
-  if (store.set && SETS.some(s => s.id === store.set)) setSel.value = store.set;
+  if (store.set) selectSet(store.set);
   if (store.order) orderSel.value = store.order;
   srcSel.value = store.src || "any";
   $("#onlyWrong").checked = !!store.wrongOnly;
@@ -467,8 +524,9 @@ function buildList(def, order, src, wrongOnly, hardOnly, noRep, hideDone) {
   return B.flatMap(x => x[0]);
 }
 function start(fresh, opts) {
-  const id = setSel.value, order = orderSel.value, src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked, hideDone = $("#hideDone").checked;
-  const def = SETS.find(s => s.id === id) || SETS[0];
+  if (setSel.value === "custom" && !topicPicked.size) { $("#topicMsg").textContent = "Tick at least one topic first"; $("#picker").hidden = false; return; }
+  const id = curSetId(), order = orderSel.value, src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked, hideDone = $("#hideDone").checked;
+  const def = getSet(id);
   const key = keyOf(def.id, order, src, wrongOnly, hardOnly, noRep, hideDone);
   const saved = store.runs[key];
   if (!fresh && saved) {
@@ -662,7 +720,7 @@ async function attachRemote(ref) {
       writeLocal(); updateHardCount();
       if (run && store.runs[run.key]) {
         const [sid, order, ...rest] = run.key.split("|");
-        setSel.value = sid; orderSel.value = order;
+        selectSet(sid); orderSel.value = order;
         srcSel.value = rest.find(x => x !== "w" && x !== "h" && x !== "n" && x !== "u") || "any"; $("#onlyWrong").checked = rest.includes("w"); $("#onlyHard").checked = rest.includes("h"); $("#noRep").checked = rest.includes("n"); $("#hideDone").checked = rest.includes("u");
         start(false, { quiet: true });
       } else if (store.set) {
@@ -1100,8 +1158,9 @@ let pdfBusy = false;
 $("#pdfBtn").onclick = async () => {
   if (pdfBusy) return;
   const msg = t => { $("#pdfMsg").textContent = t; };
-  const id = setSel.value, src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked, hideDone = $("#hideDone").checked, mode = $("#pdfMode").value;
-  const def = SETS.find(s => s.id === id) || SETS[0];
+  if (setSel.value === "custom" && !topicPicked.size) { msg("Tick at least one topic first"); return; }
+  const id = curSetId(), src = srcSel.value, wrongOnly = $("#onlyWrong").checked, hardOnly = $("#onlyHard").checked, noRep = $("#noRep").checked, hideDone = $("#hideDone").checked, mode = $("#pdfMode").value;
+  const def = getSet(id);
   const list = buildList(def, orderSel.value === "rep" ? "rep" : "seq", src, wrongOnly, hardOnly, noRep, hideDone);
   if (!list.length) { msg("This filter has no questions"); return; }
   pdfBusy = true; $("#pdfBtn").disabled = true;
