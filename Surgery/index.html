@@ -138,6 +138,8 @@ h1{font-family:var(--display);font-size:clamp(26px,5.5vw,36px);line-height:1.1;m
 .grade-row{display:flex;gap:8px;margin:2px 0}
 .grade-row .btn{padding:11px 12px}
 .btn.nav{flex:0 0 auto;min-width:52px;padding-inline:12px}
+.btn.nav.wide{flex:1 1 0}
+.btn.nav.wide .nl{display:inline!important}
 .btn.pass{background:var(--pass);color:var(--pass-ink);border-color:var(--pass);flex:2}
 .btn.fail{background:var(--fail);color:var(--fail-ink);border-color:var(--fail);flex:2}
 @media (max-width:420px){.btn.nav .nl{display:none}}
@@ -352,15 +354,17 @@ function render(){
     $("flip").onclick = flip;
   } else {
     const imgs = c.imgs.map((f,k)=>`<div class="scan" data-k="${k}"><img src="${(window.PQIMG||{})[c.sys+"-"+f.replace(/\.jpg$/,"")] || ("img/"+c.sys+"-"+f)}" alt="Answer from Surgery In Capsule" decoding="async"><canvas class="ink-h"></canvas><canvas class="ink-p"></canvas></div>`).join("");
-    const GR = `<div class="grade-row"><button class="btn fail" data-g="fail" type="button">✗ Fail</button><button class="btn pass" data-g="pass" type="button">✓ Pass</button></div>`;
+    const GR = prefs.study ? "" : `<div class="grade-row"><button class="btn fail" data-g="fail" type="button">✗ Fail</button><button class="btn pass" data-g="pass" type="button">✓ Pass</button></div>`;
     card.innerHTML = `<div class="back">${tags}<p class="back-q">${esc(c.q)}${pen}</p>${GR}${(c.zbook || c.book) ? PPH(c) : ""}${c.mn.map(mnHTML).join("")}${imgs}${PAGES[c.id] ? `<div class="page">${PAGES[c.id]}</div>` : ""}<p class="src">${esc(c.src)}</p>${GR}</div>`;
-    dock.innerHTML = PREV() + `<button class="btn fail" id="fail" type="button">✗ Fail</button><button class="btn pass" id="pass" type="button">✓ Pass</button>` + NEXT();
-    $("fail").onclick = () => mark("fail"); $("pass").onclick = () => mark("pass");
+    if (prefs.study) { dock.innerHTML = PREV().replace("btn nav", "btn nav wide") + NEXT().replace("btn nav", "btn nav wide"); }
+    else { dock.innerHTML = PREV() + `<button class="btn fail" id="fail" type="button">✗ Fail</button><button class="btn pass" id="pass" type="button">✓ Pass</button>` + NEXT();
+    $("fail").onclick = () => mark("fail"); $("pass").onclick = () => mark("pass"); }
     inkAttach(c);
   }
   inkRefreshBar();
   renderReset();
 }
+function toCard(){ const el = $("card"); if (!el) return; const y = el.getBoundingClientRect().top + window.scrollY - 10; window.scrollTo({top: Math.max(0, y)}); }
 function mark(s){
   const c = view.queue[0]; if (!c) return;
   view.hist.push(c);
@@ -370,15 +374,15 @@ function mark(s){
   if (s === "fail") {
     if (prefs.shuffle && view.queue.length > 2) view.queue.splice(2 + rnd(view.queue.length - 1), 0, c); else view.queue.push(c);
   }
-  view.flipped = false; persist(); render(); window.scrollTo({top:0});
+  view.flipped = false; persist(); render(); toCard();
 }
-function next(){ const c = view.queue.shift(); if (!c) return; view.hist.push(c); view.queue.push(c); view.flipped=false; render(); window.scrollTo({top:0}); }
+function next(){ const c = view.queue.shift(); if (!c) return; view.hist.push(c); view.queue.push(c); view.flipped=false; render(); toCard(); }
 function prev(){
   const c = view.hist.pop(); if (!c) return;
   const i = view.queue.indexOf(c); if (i >= 0) view.queue.splice(i, 1);
-  view.queue.unshift(c); view.flipped=false; render(); window.scrollTo({top:0});
+  view.queue.unshift(c); view.flipped=false; render(); toCard();
 }
-function flip(){ if (!view.queue[0] || prefs.study) return; view.flipped = !view.flipped; render(); if (!view.flipped) window.scrollTo({top:0}); }
+function flip(){ if (!view.queue[0] || prefs.study) return; view.flipped = !view.flipped; render(); if (!view.flipped) toCard(); }
 function renderReset(){
   const w = $("reset-wrap");
   const narrowed = prefs.systems.length || prefs.off.length || prefs.cat!=="all" || prefs.mn;
@@ -449,7 +453,7 @@ $("dock").addEventListener("click", e => { const b = e.target.closest("button");
 document.addEventListener("keydown", e => {
   if (e.target.tagName==="INPUT") return;
   if (view.flipped && INK.on && (e.ctrlKey||e.metaKey) && e.key==="z") { e.preventDefault(); inkUndo(); return; }
-  if (view.flipped || prefs.study) { if (e.key==="p"||e.key==="ArrowRight") mark("pass"); else if (e.key==="f"||e.key==="ArrowLeft") mark("fail"); }
+  if (view.flipped && !prefs.study) { if (e.key==="p"||e.key==="ArrowRight") mark("pass"); else if (e.key==="f"||e.key==="ArrowLeft") mark("fail"); }
   else { if (e.key==="ArrowRight") next(); else if (e.key==="ArrowLeft") prev(); }
 });
 const change = () => { view.confirmReset=false; persist(); buildQueue(); render(); };
@@ -772,7 +776,7 @@ setInterval(() => { if (ghTok && document.visibilityState === "visible") ghSync(
 ghShow(!!ghTok); if (ghTok) ghSync();
 
 /* ---------- Password lock: answers are stored encrypted ---------- */
-const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "Zoq5yX6lPW2fgac1FTT9mSNIVtB7s/knI+btadpfTJ1mhDxVN3U=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin", "s-9.bin"] };
+const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "S+3Ph5CWj0psnNLWsGXNZcm13dNLaWGn7AZHofjovv3WFPx3MzY=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin", "s-9.bin"] };
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function keyFrom(pw) {
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
