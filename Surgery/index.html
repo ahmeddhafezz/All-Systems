@@ -96,6 +96,9 @@ h1{font-family:var(--display);font-size:clamp(26px,5.5vw,36px);line-height:1.1;m
 .ink-bar .tog[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);outline:none}
 .ink-bar .sw{width:22px;height:22px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
 .ink-bar .hl .sw{border-radius:4px;width:24px;height:14px}
+.sizes{display:contents}
+.fab-col .sizes button .dot,.ink-bar .sizes .dot{display:block;border-radius:50%;border:1px solid rgba(0,0,0,.25)}
+.fab-col button[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
 .ink-bar .sep{width:1px;height:28px;background:var(--line);margin:0 2px}
 .ink-bar .hint{font-size:12.5px;color:var(--muted);flex-basis:100%;margin:0 2px}
 .ink-bar .danger{color:var(--fail)}
@@ -465,7 +468,10 @@ $("f-study").onclick=()=>{prefs.study=!prefs.study; view.flipped=false; persist(
 
 /* ---------- Ink: highlighter & pen over the answer pictures (saved on this device, per card) ---------- */
 const LSI = "surgery-ink-v1";
-const INK = {on:false, tool:"hy", data:{}, undo:[], card:null, clearArm:0, pos:"left"};
+const INK = {on:false, tool:"hy", data:{}, undo:[], card:null, clearArm:0, pos:"left", size:{}};
+const INK_SIZES = [["XS",0.5],["S",0.75],["M",1],["L",1.5],["XL",2.2]];
+try { INK.size = JSON.parse(localStorage.getItem("surgery-ink-v1-size") || "{}") || {}; } catch(e) { INK.size = {}; }
+const inkMult = k => (INK.size[k] || 1);
 const TOOLS = {
   hy:{kind:"h", c:"#fff250", w:0.024, label:"Yellow highlighter"},
   ho:{kind:"h", c:"#ffab4c", w:0.024, label:"Orange highlighter"},
@@ -487,7 +493,7 @@ function inkBar(){
     if (t.kind === "e") return `<button type="button" data-tool="er" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool==="er"}">🧽</button>`;
     if (t.kind === "i") return `<button type="button" class="ink" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span style="font-size:18px;line-height:1;border-bottom:4px solid ${t.c};padding-bottom:1px">✒️</span></button>`;
     return `<button type="button" class="${t.kind==="h"?"hl":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
-  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
+  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}${TOOLS[INK.tool] && TOOLS[INK.tool].kind !== "e" ? `<i class="sep"></i><span class="sizes">${INK_SIZES.map(([n,m]) => { const px = Math.max(3, Math.round((TOOLS[INK.tool].kind === "h" ? 9 : 6) * m)); return `<button type="button" data-size="${m}" aria-label="Thickness ${n}" title="Thickness ${n}" aria-pressed="${inkMult(INK.tool)===m}"><span class="dot" style="width:${px}px;height:${px}px;background:${TOOLS[INK.tool].c}"></span></button>`; }).join("")}</span>` : ""}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
   return `<button type="button" class="tog" data-act="toggle" aria-pressed="${INK.on}" aria-label="${INK.on ? "Stop drawing" : "Draw on the answer"}" title="${INK.on ? "Stop drawing" : "Draw on the answer"}">${INK.on ? "✓" : "✏️"}</button>${tools}`;
 }
 function inkRefreshBar(){ const f = $("inkfab"); if (!f) return; f.classList.toggle("top", INK.pos === "top"); f.innerHTML = inkBar(); f.hidden = !((view.flipped || prefs.study) && view.queue[0]); vvPlace(); }
@@ -562,7 +568,7 @@ function inkAttach(c){
       begin(x, y){
         const t = TOOLS[INK.tool], pt = pos(x, y);
         if (t.kind === "e") { cur = {erase:true}; eraseAt(pt); return; }
-        cur = {k:t.kind, c:t.c, w:t.w, p:[t.kind === "i" ? [pt[0], pt[1], 1] : pt]};
+        cur = {k:t.kind, c:t.c, w:t.w * inkMult(INK.tool), p:[t.kind === "i" ? [pt[0], pt[1], 1] : pt]};
         if (t.kind === "h") { cur.y0 = pt[1]; cur.x0 = cur.x1 = pt[0]; }
         cur.lt = performance.now();
         inkStroke(layer(), cur, cp.width); if (t.kind !== "h") armHold(pt);
@@ -678,6 +684,7 @@ $("inkfab").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   e.stopPropagation();
   const c = INK.card;
+  if (b.dataset.size) { INK.size[INK.tool] = +b.dataset.size; try { localStorage.setItem("surgery-ink-v1-size", JSON.stringify(INK.size)); } catch(err) {} inkRefreshBar(); return; }
   if (b.dataset.tool) { INK.tool = b.dataset.tool; try { localStorage.setItem(LSI + "-tool", INK.tool); } catch(err) {} INK.clearArm = 0; inkRefreshBar(); return; }
   const act = b.dataset.act;
   if (act === "toggle") { INK.on = !INK.on; INK.clearArm = 0; $("card").classList.toggle("inking", INK.on); inkRefreshBar(); return; }
@@ -776,7 +783,7 @@ setInterval(() => { if (ghTok && document.visibilityState === "visible") ghSync(
 ghShow(!!ghTok); if (ghTok) ghSync();
 
 /* ---------- Password lock: answers are stored encrypted ---------- */
-const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "S+3Ph5CWj0psnNLWsGXNZcm13dNLaWGn7AZHofjovv3WFPx3MzY=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin", "s-9.bin"] };
+const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "iV+ePFUqzbRARTHUeeHbdzfDZEqh7IeRyUF4CrYFE4CeudqsAZ0=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin", "s-9.bin"] };
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function keyFrom(pw) {
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
