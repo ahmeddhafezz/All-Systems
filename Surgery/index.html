@@ -274,7 +274,7 @@ fixPrefs();
 
 const sysOn = k => !prefs.systems.length || prefs.systems.includes(k);
 const tk = (sys, topic) => sys + "|" + topic;
-const inFilter = c => sysOn(c.sys) && !prefs.off.includes(tk(c.sys, c.topic)) && (prefs.cat==="all"||c.cat===prefs.cat) && (!prefs.mn||c.mn.length) && (!prefs.failed||progress[c.id]?.s==="fail");
+const inFilter = c => sysOn(c.sys) && !prefs.off.includes(tk(c.sys, c.topic)) && (prefs.cat==="all"||String(prefs.cat).split(",").includes(c.cat)) && (!prefs.mn||c.mn.length) && (!prefs.failed||progress[c.id]?.s==="fail");
 function saveLocal(){ try { localStorage.setItem(LS, JSON.stringify({progress, prefs})); } catch(e){} }
 let saveRemote = async function(){
   if (!dbRef) return;
@@ -433,7 +433,7 @@ $("tgroups").addEventListener("click", e => {
 function chips(){
   $("sys-all").setAttribute("aria-pressed", !prefs.systems.length);
   SYSTEMS.forEach(s => $("sys-" + s.key).setAttribute("aria-pressed", prefs.systems.includes(s.key)));
-  ["all","A","B","C"].forEach(k => $("f-" + k).setAttribute("aria-pressed", prefs.cat===k));
+  { const on = prefs.cat==="all" ? [] : String(prefs.cat).split(","); $("f-all").setAttribute("aria-pressed", prefs.cat==="all"); ["A","B","C"].forEach(k => $("f-" + k).setAttribute("aria-pressed", on.includes(k))); }
   $("shuffle").setAttribute("aria-pressed", prefs.shuffle);
   $("shuffle").textContent = prefs.shuffle ? "🔀 Shuffle again" : "🔀 Shuffle";
   $("unshuffle").disabled = !prefs.shuffle;
@@ -460,7 +460,8 @@ document.addEventListener("keydown", e => {
   else { if (e.key==="ArrowRight") next(); else if (e.key==="ArrowLeft") prev(); }
 });
 const change = () => { view.confirmReset=false; persist(); buildQueue(); render(); };
-["all","A","B","C"].forEach(k => $("f-" + k).onclick = () => { prefs.cat = k; change(); });
+$("f-all").onclick = () => { prefs.cat = "all"; change(); };
+["A","B","C"].forEach(k => $("f-" + k).onclick = () => { let on = prefs.cat==="all" ? [] : String(prefs.cat).split(",").filter(Boolean); on = on.includes(k) ? on.filter(x => x !== k) : on.concat(k); on = ["A","B","C"].filter(x => on.includes(x)); prefs.cat = (on.length === 0 || on.length === 3) ? "all" : on.join(","); change(); });
 $("shuffle").onclick=doShuffle;
 $("unshuffle").onclick=doUnshuffle;
 $("f-failed").onclick=()=>{prefs.failed=!prefs.failed;change();};
@@ -783,7 +784,7 @@ setInterval(() => { if (ghTok && document.visibilityState === "visible") ghSync(
 ghShow(!!ghTok); if (ghTok) ghSync();
 
 /* ---------- Password lock: answers are stored encrypted ---------- */
-const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "iV+ePFUqzbRARTHUeeHbdzfDZEqh7IeRyUF4CrYFE4CeudqsAZ0=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin", "s-9.bin"] };
+const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "SDZljE4Wxh8YOPWPMvPsgkL7pTyhuyRICK8293kSQs1fT4XzMx8=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin", "s-9.bin"] };
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function keyFrom(pw) {
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
