@@ -97,6 +97,9 @@ h1{font-family:var(--display);font-size:clamp(26px,5.5vw,36px);line-height:1.1;m
 .ink-bar .sw{width:22px;height:22px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
 .ink-bar .hl .sw{border-radius:4px;width:24px;height:14px}
 .sizes{display:contents}
+.fab-col .neat{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-size:16px}
+.fab-col .neat small{font-size:9px;margin-top:1px;font-weight:700;color:var(--muted)}
+.fab-col .neat[aria-pressed="true"] small{color:var(--accent)}
 .fab-col .sizes button .dot,.ink-bar .sizes .dot{display:block;border-radius:50%;border:1px solid rgba(0,0,0,.25)}
 .fab-col button[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
 .ink-bar .sep{width:1px;height:28px;background:var(--line);margin:0 2px}
@@ -501,7 +504,7 @@ function inkBar(){
     if (t.kind === "e") return `<button type="button" data-tool="er" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool==="er"}">🧽</button>`;
     if (t.kind === "i") return `<button type="button" class="ink" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span style="font-size:18px;line-height:1;border-bottom:4px solid ${t.c};padding-bottom:1px">✒️</span></button>`;
     return `<button type="button" class="${t.kind==="h"||t.kind==="w"?"hl":""}${t.kind==="w"?" wo":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
-  const tools = INK.on ? `<div class="fab-col"><button type="button" data-tool="hd" aria-label="${TOOLS.hd.label}" title="${TOOLS.hd.label}" aria-pressed="${INK.tool==="hd"}">✋</button><i class="sep"></i>${sw("hy")}${sw("ho")}${sw("hw")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}${TOOLS[INK.tool] && !["e","m"].includes(TOOLS[INK.tool].kind) ? `<i class="sep"></i><span class="sizes">${INK_SIZES.map(([n,m]) => { const px = Math.max(3, Math.round((TOOLS[INK.tool].kind === "h" || TOOLS[INK.tool].kind === "w" ? 9 : 6) * m)); return `<button type="button" data-size="${m}" aria-label="Thickness ${n}" title="Thickness ${n}" aria-pressed="${inkMult(INK.tool)===m}"><span class="dot" style="width:${px}px;height:${px}px;background:${TOOLS[INK.tool].c}"></span></button>`; }).join("")}</span>` : ""}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
+  const tools = INK.on ? `<div class="fab-col"><button type="button" data-tool="hd" aria-label="${TOOLS.hd.label}" title="${TOOLS.hd.label}" aria-pressed="${INK.tool==="hd"}">✋</button><i class="sep"></i>${sw("hy")}${sw("ho")}${sw("hw")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i><button type="button" data-act="neat" class="neat" aria-pressed="${INK.neat>0}" title="Neat writing: smooths your pen strokes and makes each word smaller after you pause. Tap to change size." aria-label="Neat writing ${INK.neat ? Math.round(NEAT_STEPS[INK.neat]*100) + "%" : "off"}">✨<small>${INK.neat ? Math.round(NEAT_STEPS[INK.neat]*100) + "%" : "off"}</small></button>${sw("er")}${TOOLS[INK.tool] && !["e","m"].includes(TOOLS[INK.tool].kind) ? `<i class="sep"></i><span class="sizes">${INK_SIZES.map(([n,m]) => { const px = Math.max(3, Math.round((TOOLS[INK.tool].kind === "h" || TOOLS[INK.tool].kind === "w" ? 9 : 6) * m)); return `<button type="button" data-size="${m}" aria-label="Thickness ${n}" title="Thickness ${n}" aria-pressed="${inkMult(INK.tool)===m}"><span class="dot" style="width:${px}px;height:${px}px;background:${TOOLS[INK.tool].c}"></span></button>`; }).join("")}</span>` : ""}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
   return `<button type="button" class="tog" data-act="toggle" aria-pressed="${INK.on}" aria-label="${INK.on ? "Stop drawing" : "Draw on the answer"}" title="${INK.on ? "Stop drawing" : "Draw on the answer"}">${INK.on ? "✓" : "✏️"}</button>${tools}`;
 }
 function inkRefreshBar(){ const f = $("inkfab"); if (!f) return; const cd = $("card"); if (cd) cd.classList.toggle("panmode", INK.on && INK.tool === "hd"); f.classList.toggle("top", INK.pos === "top"); f.innerHTML = inkBar(); f.hidden = !((view.flipped || prefs.study) && view.queue[0]); vvPlace(); }
@@ -527,6 +530,31 @@ function inkStroke(cv, st, S){
   for (let i = 1; i < P.length; i++) g.lineTo(P[i][0]*S, P[i][1]*S);
   g.stroke();
 }
+
+const NEAT_STEPS = [0, 0.85, 0.7, 0.55];
+try { INK.neat = +(localStorage.getItem("surgery-ink-neat") || 0) || 0; } catch(e) { INK.neat = 0; }
+const neatOn = () => INK.neat > 0;
+/* light smoothing: Chaikin corner-cutting keeps the shape but removes the shakes */
+function neatSmooth(P){
+  if (P.length < 4) return P;
+  let Q = P;
+  for (let it = 0; it < 2; it++) {
+    const R = [Q[0]];
+    for (let i = 0; i < Q.length - 1; i++) {
+      const a = Q[i], b = Q[i+1];
+      const q = [a[0]*0.75 + b[0]*0.25, a[1]*0.75 + b[1]*0.25], r = [a[0]*0.25 + b[0]*0.75, a[1]*0.25 + b[1]*0.75];
+      if (a.length > 2) { q.push(a[2]*0.75 + b[2]*0.25); r.push(a[2]*0.25 + b[2]*0.75); }
+      R.push(q, r);
+    }
+    R.push(Q[Q.length - 1]); Q = R;
+  }
+  return Q.map(p => p.map(v => +v.toFixed(4)));
+}
+function neatBox(sts){
+  let x0 = 9, y0 = 9, x1 = -9, y1 = -9;
+  for (const s of sts) for (const p of s.p) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+  return {x0, y0, x1, y1};
+}
 /* Fountain-style ink: smoothed curve whose width follows speed/pressure (slow = thicker, fast = thinner), tapered ends. */
 function inkFountain(g, st, S){
   const P = st.p, n = P.length; g.fillStyle = st.c; g.strokeStyle = st.c; g.lineCap = "round"; g.lineJoin = "round";
@@ -549,7 +577,17 @@ function inkAttach(c){
     const redraw = () => inkDraw(scan);
     if (img.complete) redraw(); else img.addEventListener("load", redraw, {once:true});
     if (window.ResizeObserver) new ResizeObserver(redraw).observe(img);
-    let cur = null, holdT = null, holdAt = null;
+    let cur = null, holdT = null, holdAt = null, grp = null, grpT = null;
+    const neatFlush = () => {
+      clearTimeout(grpT); if (!grp) return;
+      const g = grp; grp = null;
+      const f = NEAT_STEPS[INK.neat] || 1; if (f >= 1 || !g.items.length) return;
+      const b = neatBox(g.items.map(x => x[0])), ax = b.x0, ay = (b.y0 + b.y1) / 2;   // shrink toward where the word started, keeping it on its line
+      for (const [st] of g.items) st.p = st.p.map(p => { const q = [+(ax + (p[0]-ax)*f).toFixed(4), +(ay + (p[1]-ay)*f).toFixed(4)]; if (p.length > 2) q.push(p[2]); return q; });
+      INK.undo.push({t:"neat", items:g.items});
+      inkSave(); inkDraw(scan);
+    };
+    scan._neatFlush = neatFlush;
     const pos = (x, y) => { const r = cp.getBoundingClientRect(); const w = r.width || 1; return [+(((x - r.left) / w).toFixed(4)), +(((y - r.top) / w).toFixed(4))]; };
     const eraseAt = (pt) => {
       const arr = inkStrokes(c.id, k), rad = 0.018, gone = [];
@@ -577,6 +615,7 @@ function inkAttach(c){
         const t = TOOLS[INK.tool], pt = pos(x, y);
         if (t.kind === "m") { cur = null; return; }
         if (t.kind === "e") { cur = {erase:true}; eraseAt(pt); return; }
+        clearTimeout(grpT);
         cur = {k:t.kind, c:t.c, w:t.w * inkMult(INK.tool), p:[t.kind === "i" ? [pt[0], pt[1], 1] : pt]};
         if (t.kind === "h" || t.kind === "w") { cur.y0 = pt[1]; cur.x0 = cur.x1 = pt[0]; }
         cur.lt = performance.now();
@@ -605,7 +644,21 @@ function inkAttach(c){
       end(){
         clearTimeout(holdT); holdAt = null;
         if (!cur) return;
-        if (!cur.erase && cur.p.length) { delete cur.straight; delete cur.x0; delete cur.x1; delete cur.y0; delete cur.lt; delete cur.force; inkStrokes(c.id, k).push(cur); INK.undo.push({t:"add", k}); }
+        if (!cur.erase && cur.p.length) {
+          const pen = cur.k === "p" || cur.k === "i", wasStraight = !!cur.straight;
+          delete cur.straight; delete cur.x0; delete cur.x1; delete cur.y0; delete cur.lt; delete cur.force;
+          const orig = cur.p.map(p => p.slice());
+          if (neatOn() && pen && !wasStraight) cur.p = neatSmooth(cur.p);
+          inkStrokes(c.id, k).push(cur); INK.undo.push({t:"add", k});
+          if (neatOn() && pen && !wasStraight) {
+            const bb = neatBox([cur]);
+            if (grp) { const gb = neatBox(grp.items.map(x => x[0])), pad = Math.max(0.05, (gb.y1 - gb.y0) * 1.2);
+              if (bb.x0 > gb.x1 + pad || bb.x1 < gb.x0 - pad || bb.y0 > gb.y1 + pad || bb.y1 < gb.y0 - pad) neatFlush(); }
+            if (!grp) grp = {items:[]};
+            grp.items.push([cur, orig]);
+            clearTimeout(grpT); grpT = setTimeout(neatFlush, 850);
+          } else neatFlush();
+        }
         cur = null; inkSave(); inkDraw(scan);
       },
       cancel(){ clearTimeout(holdT); holdAt = null; if (cur && !cur.erase) { cur = null; inkDraw(scan); } cur = null; }
@@ -683,10 +736,12 @@ function inkAttach(c){
   card.addEventListener("touchend", done); card.addEventListener("touchcancel", done);
 })();
 function inkUndo(){
+  document.querySelectorAll("#card .scan").forEach(s => s._neatFlush && s._neatFlush());
   const c = INK.card, a = INK.undo.pop(); if (!c || !a) return;
   if (a.t === "add") inkStrokes(c.id, a.k).pop();
   else if (a.t === "erase") { const arr = inkStrokes(c.id, a.k); a.items.slice().reverse().forEach(([i, st]) => arr.splice(i, 0, st)); }
   else if (a.t === "clear") INK.data[c.id] = a.data;
+  else if (a.t === "neat") a.items.forEach(([st, orig]) => { st.p = orig.map(p => p.slice()); });
   inkSave(); document.querySelectorAll("#card .scan").forEach(inkDraw);
 }
 $("inkfab").addEventListener("click", e => {
@@ -697,6 +752,7 @@ $("inkfab").addEventListener("click", e => {
   if (b.dataset.tool) { INK.tool = b.dataset.tool; try { localStorage.setItem(LSI + "-tool", INK.tool); } catch(err) {} INK.clearArm = 0; inkRefreshBar(); return; }
   const act = b.dataset.act;
   if (act === "toggle") { INK.on = !INK.on; INK.clearArm = 0; $("card").classList.toggle("inking", INK.on); inkRefreshBar(); return; }
+  if (act === "neat") { document.querySelectorAll("#card .scan").forEach(s => s._neatFlush && s._neatFlush()); INK.neat = (INK.neat + 1) % NEAT_STEPS.length; try { localStorage.setItem("surgery-ink-neat", String(INK.neat)); } catch(err) {} inkRefreshBar(); return; }
   if (act === "undo") { inkUndo(); return; }
   if (act === "pos") { INK.pos = INK.pos === "top" ? "left" : "top"; try { localStorage.setItem(LSI + "-pos", INK.pos); } catch(err) {} INK.clearArm = 0; inkRefreshBar(); return; }
   if (act === "clear" && c) {
@@ -792,7 +848,7 @@ setInterval(() => { if (ghTok && document.visibilityState === "visible") ghSync(
 ghShow(!!ghTok); if (ghTok) ghSync();
 
 /* ---------- Password lock: answers are stored encrypted ---------- */
-const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "2IDbRfld71sRxxjQMrfVuVS71qUuTy3su2YPlpjUuC+PxExCBxM=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin"] };
+const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "Z8hEWzfDIBQfyIPP8zkQ/3dPEjsU5Bybp4eCdjKk7xPZgpyzenw=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin"] };
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function keyFrom(pw) {
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
