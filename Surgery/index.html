@@ -106,6 +106,9 @@ h1{font-family:var(--display);font-size:clamp(26px,5.5vw,36px);line-height:1.1;m
 .scan canvas{position:absolute;left:4px;top:4px;pointer-events:none}
 .scan canvas.ink-h{mix-blend-mode:multiply}
 .inking .scan canvas.ink-p{pointer-events:auto;touch-action:none;cursor:crosshair}
+.inking.panmode .scan canvas.ink-p{pointer-events:none;touch-action:auto;cursor:grab}
+.inking.panmode .scan,.inking.panmode .scan *{-webkit-user-select:auto;user-select:auto}
+.fab-col .wo .sw{background:#fff!important;border:1.5px solid #8a8f99}
 .inking .scan{box-shadow:0 0 0 2px var(--accent)}
 .inking .scan,.inking .scan *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 
@@ -483,6 +486,8 @@ const TOOLS = {
   pb:{kind:"p", c:"#1f4fd1", w:0.0042, label:"Blue pen"},
   ik:{kind:"i", c:"#14182b", w:0.0062, label:"Ink pen (fountain)"},
   ib:{kind:"i", c:"#1638a8", w:0.0062, label:"Blue ink pen (fountain)"},
+  hw:{kind:"w", c:"#ffffff", w:0.024, label:"White highlighter (hide text you don't need)"},
+  hd:{kind:"m", label:"Hand: move / scroll the page"},
   er:{kind:"e", label:"Eraser"}
 };
 try { INK.data = JSON.parse(localStorage.getItem(LSI) || "{}") || {}; } catch(e) { INK.data = {}; }
@@ -495,11 +500,11 @@ function inkBar(){
   const sw = (k) => { const t = TOOLS[k];
     if (t.kind === "e") return `<button type="button" data-tool="er" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool==="er"}">🧽</button>`;
     if (t.kind === "i") return `<button type="button" class="ink" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span style="font-size:18px;line-height:1;border-bottom:4px solid ${t.c};padding-bottom:1px">✒️</span></button>`;
-    return `<button type="button" class="${t.kind==="h"?"hl":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
-  const tools = INK.on ? `<div class="fab-col">${sw("hy")}${sw("ho")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}${TOOLS[INK.tool] && TOOLS[INK.tool].kind !== "e" ? `<i class="sep"></i><span class="sizes">${INK_SIZES.map(([n,m]) => { const px = Math.max(3, Math.round((TOOLS[INK.tool].kind === "h" ? 9 : 6) * m)); return `<button type="button" data-size="${m}" aria-label="Thickness ${n}" title="Thickness ${n}" aria-pressed="${inkMult(INK.tool)===m}"><span class="dot" style="width:${px}px;height:${px}px;background:${TOOLS[INK.tool].c}"></span></button>`; }).join("")}</span>` : ""}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
+    return `<button type="button" class="${t.kind==="h"||t.kind==="w"?"hl":""}${t.kind==="w"?" wo":""}" data-tool="${k}" aria-label="${t.label}" title="${t.label}" aria-pressed="${INK.tool===k}"><span class="sw" style="background:${t.c}"></span></button>`; };
+  const tools = INK.on ? `<div class="fab-col"><button type="button" data-tool="hd" aria-label="${TOOLS.hd.label}" title="${TOOLS.hd.label}" aria-pressed="${INK.tool==="hd"}">✋</button><i class="sep"></i>${sw("hy")}${sw("ho")}${sw("hw")}<i class="sep"></i>${sw("pk")}${sw("pr")}${sw("pb")}<i class="sep"></i>${sw("ik")}${sw("ib")}<i class="sep"></i>${sw("er")}${TOOLS[INK.tool] && !["e","m"].includes(TOOLS[INK.tool].kind) ? `<i class="sep"></i><span class="sizes">${INK_SIZES.map(([n,m]) => { const px = Math.max(3, Math.round((TOOLS[INK.tool].kind === "h" || TOOLS[INK.tool].kind === "w" ? 9 : 6) * m)); return `<button type="button" data-size="${m}" aria-label="Thickness ${n}" title="Thickness ${n}" aria-pressed="${inkMult(INK.tool)===m}"><span class="dot" style="width:${px}px;height:${px}px;background:${TOOLS[INK.tool].c}"></span></button>`; }).join("")}</span>` : ""}<button type="button" data-act="undo" aria-label="Undo" title="Undo">↶</button><button type="button" data-act="clear" class="danger${INK.clearArm?" armed":""}" aria-label="Clear this card's notes" title="Clear this card's notes">${INK.clearArm ? "Sure?" : "🗑"}</button><i class="sep"></i><button type="button" data-act="pos" class="pos" aria-label="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}" title="${INK.pos==="top" ? "Move tools to the left side" : "Move tools to the top"}">${INK.pos==="top" ? "⬅" : "⬆"}</button></div>` : "";
   return `<button type="button" class="tog" data-act="toggle" aria-pressed="${INK.on}" aria-label="${INK.on ? "Stop drawing" : "Draw on the answer"}" title="${INK.on ? "Stop drawing" : "Draw on the answer"}">${INK.on ? "✓" : "✏️"}</button>${tools}`;
 }
-function inkRefreshBar(){ const f = $("inkfab"); if (!f) return; f.classList.toggle("top", INK.pos === "top"); f.innerHTML = inkBar(); f.hidden = !((view.flipped || prefs.study) && view.queue[0]); vvPlace(); }
+function inkRefreshBar(){ const f = $("inkfab"); if (!f) return; const cd = $("card"); if (cd) cd.classList.toggle("panmode", INK.on && INK.tool === "hd"); f.classList.toggle("top", INK.pos === "top"); f.innerHTML = inkBar(); f.hidden = !((view.flipped || prefs.study) && view.queue[0]); vvPlace(); }
 function inkDraw(scan){
   const c = INK.card; if (!c) return;
   const k = +scan.dataset.k, img = scan.querySelector("img"), ch = scan.querySelector(".ink-h"), cp = scan.querySelector(".ink-p");
@@ -516,7 +521,7 @@ function inkDraw(scan){
 function inkStroke(cv, st, S){
   const g = cv.getContext("2d"), P = st.p; if (!P.length) return;
   if (st.k === "i") return inkFountain(g, st, S);
-  g.lineCap = st.k === "h" ? "butt" : "round"; g.lineJoin = "round"; g.strokeStyle = st.c; g.lineWidth = st.w * S; g.globalAlpha = 1;
+  g.lineCap = (st.k === "h" || st.k === "w") ? "butt" : "round"; g.lineJoin = "round"; g.strokeStyle = st.c; g.lineWidth = st.w * S; g.globalAlpha = 1;
   g.beginPath(); g.moveTo(P[0][0]*S, P[0][1]*S);
   if (P.length === 1) g.lineTo(P[0][0]*S + 0.01, P[0][1]*S);
   for (let i = 1; i < P.length; i++) g.lineTo(P[i][0]*S, P[i][1]*S);
@@ -570,17 +575,18 @@ function inkAttach(c){
     scan._ink = {
       begin(x, y){
         const t = TOOLS[INK.tool], pt = pos(x, y);
+        if (t.kind === "m") { cur = null; return; }
         if (t.kind === "e") { cur = {erase:true}; eraseAt(pt); return; }
         cur = {k:t.kind, c:t.c, w:t.w * inkMult(INK.tool), p:[t.kind === "i" ? [pt[0], pt[1], 1] : pt]};
-        if (t.kind === "h") { cur.y0 = pt[1]; cur.x0 = cur.x1 = pt[0]; }
+        if (t.kind === "h" || t.kind === "w") { cur.y0 = pt[1]; cur.x0 = cur.x1 = pt[0]; }
         cur.lt = performance.now();
-        inkStroke(layer(), cur, cp.width); if (t.kind !== "h") armHold(pt);
+        inkStroke(layer(), cur, cp.width); if (t.kind !== "h" && t.kind !== "w") armHold(pt);
       },
       move(x, y){
         if (!cur) return;
         const pt = pos(x, y);
         if (cur.erase) { eraseAt(pt); return; }
-        if (cur.k === "h") {   // highlighter: always a perfectly horizontal bar at the starting height
+        if (cur.k === "h" || cur.k === "w") {   // highlighter: always a perfectly horizontal bar at the starting height
           cur.x0 = Math.min(cur.x0, pt[0]); cur.x1 = Math.max(cur.x1, pt[0]);
           cur.p = [[cur.x0, cur.y0], [cur.x1, cur.y0]]; redrawCur(); return;
         }
@@ -644,7 +650,7 @@ function inkAttach(c){
   const reset = ts => { T.x = avg(ts, "clientX"); T.y = avg(ts, "clientY"); };
   const card = $("card");
   card.addEventListener("touchstart", e => {
-    if (!INK.on || !(view.flipped || prefs.study)) return;
+    if (!INK.on || !(view.flipped || prefs.study) || INK.tool === "hd") return;
     const scan = e.target.closest && e.target.closest(".scan");
     if (!scan && T.mode !== "draw" && T.mode !== "scroll") return;
     e.preventDefault(); stopGlide();
@@ -786,7 +792,7 @@ setInterval(() => { if (ghTok && document.visibilityState === "visible") ghSync(
 ghShow(!!ghTok); if (ghTok) ghSync();
 
 /* ---------- Password lock: answers are stored encrypted ---------- */
-const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "pBkqTD6i8zwvxtnRmPEvrLmb2w3ddF23FtePPmlZbfFa+dEdtDI=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin"] };
+const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "Yp8avX7FFa3lUz344ubzdMv5YV3L69yqG+NxmLlKRBMI0kUN9C8=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin"] };
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function keyFrom(pw) {
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
