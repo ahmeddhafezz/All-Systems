@@ -593,6 +593,48 @@ async function convRead(strokes){
     return alts.length ? alts.slice(0, 8) : null;
   } catch(e) { return null; }
 }
+
+/* ---- arrow / line detection: these are kept as drawings, never turned into letters ---- */
+function shpDev(P, i, j){ const a = P[i], b = P[j], L = Math.hypot(b[0]-a[0], b[1]-a[1]) || 1e-9; let m = 0;
+  for (let t = i + 1; t < j; t++) { const q = P[t]; m = Math.max(m, Math.abs((b[0]-a[0])*(a[1]-q[1]) - (a[0]-q[0])*(b[1]-a[1])) / L); } return m; }
+function shpRun(P){ let best = {i:0, j:0, len:0};
+  for (let i = 0; i < P.length - 1; i++) for (let j = P.length - 1; j > i; j--) {
+    const len = Math.hypot(P[j][0]-P[i][0], P[j][1]-P[i][1]); if (len <= best.len) break;
+    if (shpDev(P, i, j) <= Math.max(0.0045, len * 0.06)) { best = {i, j, len}; break; } }
+  return best; }
+function shpPath(P){ let s = 0; for (let i = 1; i < P.length; i++) s += Math.hypot(P[i][0]-P[i-1][0], P[i][1]-P[i-1][1]); return s; }
+function shpThin(P){ if (P.length <= 60) return P; const s = P.length / 60, R = []; for (let i = 0; i < 60; i++) R.push(P[Math.floor(i*s)]); R.push(P[P.length-1]); return R; }
+function shapeSplit(sts){
+  const info = sts.map(st => { const P = shpThin(st.p), r = shpRun(P), path = shpPath(P) || 1e-9, bb = neatBox([st]);
+    const ang = Math.abs(Math.atan2(P[r.j][1]-P[r.i][1], P[r.j][0]-P[r.i][0]) * 180 / Math.PI), a90 = ang > 90 ? 180 - ang : ang;
+    const tail = P.slice(r.j), head = P.slice(0, r.i + 1);
+    const small = q => q.length > 1 && Math.hypot(...[0,1].map(d => Math.max(...q.map(x=>x[d])) - Math.min(...q.map(x=>x[d])))) <= 0.045;
+    return {st, P, r, path, bb, a90, diag: Math.hypot(bb.x1-bb.x0, bb.y1-bb.y0),
+            straight: r.len / path >= 0.85, oneArrow: r.len >= 0.03 && r.len / path >= 0.5 && r.len / path < 0.85 && (small(tail) || small(head))}; });
+  const shapes = new Map(), used = new Set();
+  const ends = x => [x.P[x.r.i], x.P[x.r.j]];
+  const shafts = info.filter(x => (x.straight && x.r.len >= 0.035) || x.oneArrow);
+  for (const sh of shafts) {
+    const E = ends(sh);
+    const heads = info.filter(x => x !== sh && !used.has(x) && x.diag <= 0.045 && !(x.straight && x.r.len >= 0.035) &&
+      E.some(e => x.st.p.some(q => Math.hypot(q[0]-e[0], q[1]-e[1]) <= 0.022)));
+    const isArrow = heads.length > 0 || sh.oneArrow, isLine = sh.straight && sh.a90 <= 30 && sh.r.len >= 0.06;
+    if (!isArrow && !isLine) continue;
+    const grp = [];
+    const shaftPts = sh.oneArrow ? sh.st.p : [sh.P[sh.r.i], sh.P[sh.r.j]];
+    shapes.set(sh.st, shaftPts); used.add(sh); grp.push(shaftPts);
+    for (const hd of heads) { const P = hd.st.p; let m = 0, mi = 0;
+      for (let t = 0; t < P.length; t++) { const d = shpDev([P[0], P[t], P[P.length-1]], 0, 2) + Math.hypot(P[t][0]-P[0][0], P[t][1]-P[0][1]) * 0; const dd = Math.abs((P[P.length-1][0]-P[0][0])*(P[0][1]-P[t][1]) - (P[0][0]-P[t][0])*(P[P.length-1][1]-P[0][1])); if (dd > m) { m = dd; mi = t; } }
+      const pts = mi > 0 && mi < P.length - 1 ? [P[0], P[mi], P[P.length-1]] : [P[0], P[P.length-1]];
+      shapes.set(hd.st, pts); used.add(hd); grp.push(pts); }
+    sh._grp = grp;
+  }
+  /* group arrows for word-splitting: one entry per arrow (shaft + its heads) */
+  const byArrow = new Map();
+  for (const x of info) if (x._grp) for (const pts of x._grp) byArrow.set(pts, x._grp.flat());
+  const shapeGroups = new Map(); for (const [st, pts] of shapes) shapeGroups.set(st, pts);
+  return {shapes: shapeGroups, text: sts.filter(st => !shapes.has(st)), arrows: info.filter(x => x._grp).map(x => x._grp.flat())};
+}
 /* correction popup: tap a converted word */
 function convPopup(st, x, y, scan){
   let pop = document.getElementById("convPop"); if (pop) pop.remove();
@@ -661,23 +703,32 @@ function inkAttach(c){
     scan._neatFlush = neatFlush;
     const convGroup = async (g, f) => {
       const sts = g.items.map(x => x[0]);
-      const alts = await convRead(sts);
+      const origOf = new Map(g.items.map(([st, o]) => [st, o]));
+      const all = neatBox(sts), ax = all.x0, ay = (all.y0 + all.y1) / 2;
+      const T = p => { const q = [+(ax + (p[0]-ax)*f).toFixed(4), +(ay + (p[1]-ay)*f).toFixed(4)]; if (p.length > 2) q.push(p[2]); return q; };
+      const {shapes, text, arrows} = shapeSplit(sts);
+      /* split the writing into words around arrows / lines (e.g. "DVT → PE" = 2 words + 1 arrow) */
+      const ivs = arrows.map(pts => { const bb = neatBox([{p: pts}]); return (bb.x0 + bb.x1) / 2; }).sort((m, n) => m - n);
+      const clusters = new Map();
+      for (const st of text) { const bb = neatBox([st]), cx = (bb.x0 + bb.x1) / 2, key = ivs.filter(v => v < cx).length; if (!clusters.has(key)) clusters.set(key, []); clusters.get(key).push(st); }
+      const reads = await Promise.all([...clusters.values()].map(cl => convRead(cl)));
       const arr = inkStrokes(c.id, k);
       if (!sts.every(s => arr.includes(s))) return;            // erased / undone meanwhile
-      if (!alts) {                                              // offline or blocked → just shrink like Neat writing
-        if (f < 1) { const b = neatBox(sts), ax = b.x0, ay = (b.y0 + b.y1) / 2;
-          for (const st of sts) st.p = st.p.map(p => { const q = [+(ax + (p[0]-ax)*f).toFixed(4), +(ay + (p[1]-ay)*f).toFixed(4)]; if (p.length > 2) q.push(p[2]); return q; });
-          INK.undo.push({t:"neat", items:g.items}); inkSave(); inkDraw(scan); }
-        INK.convFail = (INK.convFail || 0) + 1; return;
-      }
-      const b = neatBox(sts), h = Math.max(0.012, (b.y1 - b.y0)), size = +(Math.min(h * 0.95, 0.09) * f).toFixed(4);
-      const item = {k:"t", c: sts[0].c, s: size, x: +b.x0.toFixed(4), y: +((b.y0 + b.y1)/2).toFixed(4), txt: alts[0], alts,
-                    orig: g.items.map(([st, o]) => ({k: st.k, c: st.c, w: st.w, p: o}))};
-      convBox(item);
-      const idx = sts.map(s => arr.indexOf(s));
-      for (const s of sts) arr.splice(arr.indexOf(s), 1);
-      arr.push(item);
-      INK.undo.push({t:"conv", k, item, sts, idx});
+      const items = [], kept = [];
+      [...clusters.values()].forEach((cl, i) => {
+        const alts = reads[i];
+        if (!alts) { cl.forEach(st => { st.p = st.p.map(T); kept.push(st); }); INK.convFail = (INK.convFail || 0) + 1; return; }
+        const b = neatBox(cl), h = Math.max(0.012, b.y1 - b.y0), cy = (b.y0 + b.y1) / 2;
+        const p0 = T([b.x0, cy]);
+        const item = {k:"t", c: cl[0].c, s: +(Math.min(h * 0.95, 0.09) * f).toFixed(4), x: p0[0], y: p0[1], txt: alts[0], alts,
+                      orig: cl.map(st => ({k: st.k, c: st.c, w: st.w, p: origOf.get(st)}))};
+        convBox(item); items.push(item);
+      });
+      for (const [st, neat] of shapes) { st.p = neat.map(T); kept.push(st); }   // arrows / lines stay drawn, just tidied
+      for (const s of sts) { const j = arr.indexOf(s); if (j >= 0) arr.splice(j, 1); }
+      for (const s of kept) arr.push(s);
+      for (const it of items) arr.push(it);
+      INK.undo.push({t:"conv2", k, items, sts, origs: sts.map(s => origOf.get(s))});
       inkSave(); inkDraw(scan);
     };
     const pos = (x, y) => { const r = cp.getBoundingClientRect(); const w = r.width || 1; return [+(((x - r.left) / w).toFixed(4)), +(((y - r.top) / w).toFixed(4))]; };
@@ -845,6 +896,7 @@ function inkUndo(){
   else if (a.t === "neat") a.items.forEach(([st, orig]) => { st.p = orig.map(p => p.slice()); });
   else if (a.t === "conv") { const arr = inkStrokes(c.id, a.k), i = arr.indexOf(a.item); if (i >= 0) arr.splice(i, 1); a.item.orig.forEach((o, j) => { const st = a.sts[j]; st.p = o.p.map(q => q.slice()); arr.push(st); }); }
   else if (a.t === "unconv") { const arr = inkStrokes(c.id, a.k); a.back.forEach(o => { const j = arr.indexOf(o); if (j >= 0) arr.splice(j, 1); }); arr.splice(Math.min(a.i, arr.length), 0, a.st); }
+  else if (a.t === "conv2") { const arr = inkStrokes(c.id, a.k); a.items.forEach(it => { const i = arr.indexOf(it); if (i >= 0) arr.splice(i, 1); }); a.sts.forEach((st, j) => { st.p = a.origs[j].map(q => q.slice()); if (!arr.includes(st)) arr.push(st); }); }
   else if (a.t === "retxt") { a.st.txt = a.old; convBox(a.st); }
   inkSave(); document.querySelectorAll("#card .scan").forEach(inkDraw);
 }
@@ -953,7 +1005,7 @@ setInterval(() => { if (ghTok && document.visibilityState === "visible") ghSync(
 ghShow(!!ghTok); if (ghTok) ghSync();
 
 /* ---------- Password lock: answers are stored encrypted ---------- */
-const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "sY/xW6cJ5faAemUivqEMHCzYxW80nOceAxMlXoIMlbfSp1JHBcU=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin"] };
+const ENC = { salt: "KN8bASfK4llqgaJXVVO6cw==", iter: 250000, check: "ESOd2swYcei/5t+rIsN9BjgRiDpI1T5HPInyTVb0ukz0HHcONgQ=", files: ["s-1.bin", "s-2.bin", "s-3.bin", "s-4.bin", "s-5.bin", "s-6.bin", "s-7.bin", "s-8.bin"] };
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function keyFrom(pw) {
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
